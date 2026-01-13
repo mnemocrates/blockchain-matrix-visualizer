@@ -1,0 +1,291 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Bitcoin Block – Data-Driven Matrix (mempool.space)</title>
+  <style>
+    :root {
+      --matrix-green: #00ff7f;
+      --matrix-dim: #00aa55;
+      --matrix-deep: #008844;
+      --bg-black: #000000;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      --panel-bg: rgba(0, 0, 0, 0.6);
+    }
+    html, body {
+      width: 100%; height: 100%;
+      margin: 0; background: var(--bg-black);
+      color: var(--matrix-green);
+      font-family: var(--mono);
+      overflow: hidden;
+    }
+    #canvas { position: fixed; inset: 0; display: block; background: #000; }
+    #overlay {
+      position: fixed; top: 1rem; left: 1rem;
+      background: var(--panel-bg); border: 1px solid var(--matrix-dim);
+      padding: 0.75rem 1rem; border-radius: 6px; backdrop-filter: blur(2px);
+      box-shadow: 0 0 12px rgba(0,255,127,0.2); max-width: min(92vw, 56rem);
+    }
+    #overlay h1 {
+      margin: 0 0 0.5rem 0; font-size: 1rem; letter-spacing: 0.08em;
+      color: var(--matrix-green); text-shadow: 0 0 6px rgba(0,255,127,0.35);
+      display: flex; align-items: center; gap: .5rem; flex-wrap: wrap;
+    }
+    .pill {
+      border: 1px solid var(--matrix-dim); border-radius: 999px;
+      padding: 0.1rem 0.5rem; font-size: 0.85rem; color: var(--matrix-green);
+    }
+    #overlay pre { margin: 0.25rem 0 0 0; white-space: pre-wrap; word-break: break-all; color: var(--matrix-dim); line-height: 1.25; }
+    #legend { margin-top: .5rem; color: var(--matrix-deep); font-size: .85rem; }
+    #status {
+      position: fixed; right: 1rem; bottom: 1rem;
+      color: var(--matrix-dim); font-size: 0.8rem;
+      background: var(--panel-bg); padding: .35rem .5rem; border-radius: 4px;
+      border: 1px solid var(--matrix-dim);
+    }
+    a { color: var(--matrix-green); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+
+  <div id="overlay">
+    <h1>
+      Latest Block ▮ Bitcoin <span class="pill">main</span>
+      <span id="height" class="pill">Height: —</span>
+      <span id="age" class="pill">Age: —</span>
+      <span id="txcount" class="pill">Tx: —</span>
+      <span id="source" class="pill">https://mempool.space/mempool.space</a></span>
+    </h1>
+    <pre id="block-info">Loading…</pre>
+    <div id="legend">⬅︎ Hash (left) • Merkle root (center) • Header & coinbase text (right)</div>
+  </div>
+
+  <div id="status">Matrix connected to mempool.space…</div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    let W = window.innerWidth, H = window.innerHeight;
+    const fontSize = 18;
+    canvas.width = W; canvas.height = H;
+
+    let columns = Math.floor(W / fontSize);
+    let drops = [];
+    let columnPools = [];
+    let columnIndex = [];
+    let columnHue = [];
+
+    function initColumns() {
+      columns = Math.floor(W / fontSize);
+      drops = Array(columns).fill(0).map(() => Math.random() * H / fontSize);
+      columnPools = Array(columns).fill('');
+      columnIndex = Array(columns).fill(0);
+      columnHue = Array(columns).fill('#00ff7f');
+    }
+
+    window.addEventListener('resize', () => {
+      W = window.innerWidth; H = window.innerHeight;
+      canvas.width = W; canvas.height = H;
+      initColumns();
+      assignPoolsFromData(latestGlyphs);
+    });
+
+    function nextGlyph(i) {
+      const pool = columnPools[i] || '0123456789abcdef';
+      if (!pool.length) return ' ';
+      const ch = pool[columnIndex[i] % pool.length];
+      columnIndex[i] = (columnIndex[i] + 1) % pool.length;
+      return ch;
+    }
+
+    function drawMatrix() {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
+      ctx.fillRect(0, 0, W, H);
+      ctx.font = `${fontSize}px monospace`;
+
+      for (let i = 0; i < drops.length; i++) {
+        const ch = nextGlyph(i);
+        const x = i * fontSize;
+        const y = drops[i] * fontSize;
+
+        ctx.fillStyle = columnHue[i];
+        ctx.fillText(ch, x, y);
+
+        ctx.fillStyle = '#00aa55';
+        ctx.fillText(ch, x, y - fontSize);
+
+        if (y > H && Math.random() > 0.975) drops[i] = 0;
+        drops[i]++;
+      }
+      requestAnimationFrame(drawMatrix);
+    }
+
+    initColumns();
+    drawMatrix();
+
+    // ===== Live Data =====
+    const heightPill = document.getElementById('height');
+    const agePill = document.getElementById('age');
+    const txPill = document.getElementById('txcount');
+    const infoEl = document.getElementById('block-info');
+    const statusEl = document.getElementById('status');
+    const sourceLink = document.getElementById('sourceLink');
+
+    const API_BASE = 'https://mempool.space/api';
+    let lastHash = null;
+    let latestBlock = null;
+    let latestGlyphs = null;
+
+    function setStatus(msg) { statusEl.textContent = msg; }
+    function toLowerStr(val) { return (val ?? '') === '' ? '' : String(val).toLowerCase(); }
+    function toHexStr(val) {
+      if (val === undefined || val === null) return '';
+      if (typeof val === 'string') return val.toLowerCase();
+      if (typeof val === 'number') { try { return (val >>> 0).toString(16); } catch { return String(val); } }
+      return String(val).toLowerCase();
+    }
+    function hexToAsciiSafe(hex) {
+      if (!hex || typeof hex !== 'string') return '';
+      const cleaned = hex.replace(/[^0-9a-fA-F]/g, '');
+      let out = '';
+      for (let i = 0; i < cleaned.length; i += 2) {
+        const b = parseInt(cleaned.slice(i, i + 2), 16);
+        if (!isNaN(b)) {
+          const ch = String.fromCharCode(b);
+          if (ch >= ' ' && ch <= '~') out += ch;
+        }
+      }
+      return out.toLowerCase();
+    }
+    function updateAgePill(block) {
+      if (!block || !block.timestamp) { agePill.textContent = 'Age: —'; return; }
+      const secs = Math.max(0, Math.floor(Date.now()/1000) - block.timestamp);
+      const mins = Math.floor(secs / 60);
+      const rem = secs % 60;
+      agePill.textContent = `Age: ${mins}m ${rem}s`;
+    }
+
+    function renderOverlay(block, txCount, coinbaseAscii) {
+      heightPill.textContent = `Height: ${block.height ?? '—'}`;
+      txPill.textContent = `Tx: ${txCount ?? '—'}`;
+
+      const lines = [
+        `Hash:       ${block.id ?? block.hash ?? '—'}`,
+        `Time:       ${block.timestamp ? new Date(block.timestamp * 1000).toISOString() + ' (' + block.timestamp + ')' : '—'}`,
+        `Tx Count:   ${txCount ?? '—'}`,
+        `Size:       ${block.size ?? '—'} bytes`,
+        `Weight:     ${block.weight ?? '—'} wu`,
+        `Version:    ${block.version ?? '—'} (0x${block.version != null ? block.version.toString(16) : '—'})`,
+        `Merkle:     ${block.merkle_root ?? '—'}`,
+        `Difficulty: ${block.difficulty ?? '—'}`,
+        `Bits:       ${block.bits ?? '—'}`,
+        `Nonce:      ${block.nonce ?? '—'} (0x${block.nonce != null ? block.nonce.toString(16) : '—'})`,
+        `Prev:       ${block.previousblockhash ?? '—'}`,
+        `Median:     ${block.mediantime ? new Date(block.mediantime * 1000).toISOString() + ' (' + block.mediantime + ')' : '—'}`,
+        coinbaseAscii ? `Coinbase:   "${coinbaseAscii.slice(0, 120)}${coinbaseAscii.length > 120 ? '…' : ''}"` : `Coinbase:   —`,
+      ];
+      infoEl.textContent = lines.join('\n');
+      updateAgePill(block);
+
+      const hashForLink = block.id ?? block.hash;
+      if (sourceLink) {
+        sourceLink.href = hashForLink
+          ? `https://mempool.space/block/${hashForLink}`
+          : 'https://mempool.space/';
+      }
+    }
+
+    function assignPoolsFromData(glyphs) {
+      if (!glyphs) return;
+      const third = Math.max(1, Math.floor(columns / 3));
+      for (let i = 0; i < columns; i++) {
+        let pool = '';
+        let hue = '#00ff7f';
+        if (i < third) { pool = glyphs.hashHex; hue = '#00ff7f'; }
+        else if (i < 2*third) { pool = glyphs.merkleHex; hue = '#00aa55'; }
+        else { pool = glyphs.headerHex + (glyphs.coinbaseAscii || ''); hue = '#008844'; }
+
+        if (!pool || !pool.length) pool = '0123456789abcdef';
+        columnPools[i] = pool;
+        columnIndex[i] = Math.floor(Math.random() * pool.length);
+        columnHue[i] = hue;
+      }
+    }
+
+    async function fetchLatestTipHash() {
+      const res = await fetch(`${API_BASE}/blocks/tip/hash`, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`Tip hash fetch failed: ${res.status}`);
+      return (await res.text()).trim();
+    }
+    async function fetchBlockByHash(hash) {
+      const res = await fetch(`${API_BASE}/block/${hash}`, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`Block fetch failed: ${res.status}`);
+      return res.json();
+    }
+    async function fetchBlockTxids(hash) {
+      const res = await fetch(`${API_BASE}/block/${hash}/txids`, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`Block txids fetch failed: ${res.status}`);
+      return res.json();
+    }
+    async function fetchTx(txid) {
+      const res = await fetch(`${API_BASE}/tx/${txid}`, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`Tx fetch failed: ${res.status}`);
+      return res.json();
+    }
+
+    async function refreshLatestBlock() {
+      try {
+        setStatus('Fetching latest block from mempool.space…');
+        const tipHash = await fetchLatestTipHash();
+        if (!tipHash || tipHash === lastHash) {
+          updateAgePill(latestBlock);
+          setStatus('No new block; overlay refreshed.');
+          return;
+        }
+
+        const block = await fetchBlockByHash(tipHash);
+        latestBlock = block;
+        lastHash = tipHash;
+
+        let txids = [];
+        try { txids = await fetchBlockTxids(tipHash); } catch {}
+        const txCount = Array.isArray(txids) ? txids.length : (block.tx_count ?? undefined);
+
+        let coinbaseAscii = '';
+        if (Array.isArray(txids) && txids.length) {
+          try {
+            const coinbaseTx = await fetchTx(txids[0]);
+            const vin0 = coinbaseTx?.vin?.[0];
+            const cbHex = vin0?.coinbase || vin0?.scriptsig || vin0?.scriptSig || '';
+            coinbaseAscii = hexToAsciiSafe(cbHex);
+          } catch {}
+        }
+
+        const glyphs = {
+          hashHex: toLowerStr(block.id ?? block.hash ?? ''),
+          merkleHex: toLowerStr(block.merkle_root ?? ''),
+          headerHex: toHexStr(block.bits) + toHexStr(block.nonce) + toHexStr(block.version),
+          coinbaseAscii
+        };
+        latestGlyphs = glyphs;
+        assignPoolsFromData(glyphs);
+
+        renderOverlay(block, txCount, coinbaseAscii);
+        setStatus(`Updated to block ${block.height} (${tipHash.slice(0, 12)}…)`);
+      } catch (e) {
+        infoEl.textContent = `Error fetching from mempool.space: ${e.message}`;
+        setStatus('Connection error; retrying soon…');
+      }
+    }
+
+    refreshLatestBlock();
+    setInterval(refreshLatestBlock, 30000);
+    setInterval(() => updateAgePill(latestBlock), 1000);
+  </script>
+</body>
+</html>
