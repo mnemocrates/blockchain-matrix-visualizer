@@ -27,11 +27,27 @@
       background: var(--panel-bg); border: 1px solid var(--matrix-dim);
       padding: 0.75rem 1rem; border-radius: 6px; backdrop-filter: blur(2px);
       box-shadow: 0 0 12px rgba(0,255,127,0.2); max-width: min(92vw, 56rem);
+      cursor: pointer; transition: all 0.3s ease;
     }
+    #overlay:hover { box-shadow: 0 0 18px rgba(0,255,127,0.35); }
     #overlay h1 {
       margin: 0 0 0.5rem 0; font-size: 1rem; letter-spacing: 0.08em;
       color: var(--matrix-green); text-shadow: 0 0 6px rgba(0,255,127,0.35);
       display: flex; align-items: center; gap: .5rem; flex-wrap: wrap;
+    }
+    #toggle-icon {
+      margin-left: auto; font-size: 1.2rem; transition: transform 0.3s ease;
+      user-select: none;
+    }
+    #overlay.collapsed #toggle-icon { transform: rotate(-90deg); }
+    #overlay.collapsed #block-info,
+    #overlay.collapsed #legend {
+      max-height: 0; overflow: hidden; opacity: 0;
+      margin: 0; transition: max-height 0.3s ease, opacity 0.3s ease, margin 0.3s ease;
+    }
+    #block-info, #legend {
+      max-height: 1000px; opacity: 1;
+      transition: max-height 0.3s ease, opacity 0.3s ease, margin 0.3s ease;
     }
     .pill {
       border: 1px solid var(--matrix-dim); border-radius: 999px;
@@ -52,13 +68,14 @@
 <body>
   <canvas id="canvas"></canvas>
 
-  <div id="overlay">
+  <div id="overlay" class="collapsed">
     <h1>
       Latest Block ▮ Bitcoin <span class="pill">main</span>
       <span id="height" class="pill">Height: —</span>
       <span id="age" class="pill">Age: —</span>
       <span id="txcount" class="pill">Tx: —</span>
       <span id="source" class="pill">https://mempool.space/mempool.space</a></span>
+      <span id="toggle-icon">▼</span>
     </h1>
     <pre id="block-info">Loading…</pre>
     <div id="legend">⬅︎ Hash (left) • Merkle root (center) • Header & coinbase text (right)</div>
@@ -127,6 +144,12 @@
 
     initColumns();
     drawMatrix();
+
+    // ===== Expandable Header =====
+    const overlayEl = document.getElementById('overlay');
+    overlayEl.addEventListener('click', () => {
+      overlayEl.classList.toggle('collapsed');
+    });
 
     // ===== Live Data =====
     const heightPill = document.getElementById('height');
