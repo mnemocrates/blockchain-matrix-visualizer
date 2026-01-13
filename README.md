@@ -47,21 +47,83 @@ Data refreshes automatically every 30 seconds.
    xdg-open index.html
    ```
 
-### Web Hosting
+## Configuration
 
-Deploy the `index.html` file to any static web hosting service:
+All visualization settings are stored in `config.json`, making it easy to customize the experience without modifying code.
 
-- **GitHub Pages**: Push to a GitHub repository and enable Pages
-- **Netlify**: Drag and drop the file or connect to your repository
-- **Vercel**: Deploy with `vercel deploy`
-- **AWS S3**: Upload to an S3 bucket with static website hosting enabled
-- **Any HTTP server**: Apache, Nginx, or simple Python server
+### Configuration File Structure
 
-Example with Python:
-```bash
-python -m http.server 8000
-# Visit http://localhost:8000
+```json
+{
+  "display": {
+    "headerColumnPercentage": 0.25,    // Portion of screen for block header (0.0-1.0)
+    "showUIOnLoad": false,              // Show info panel and status on page load
+    "initiallyCollapsed": true          // Start with info panel collapsed
+  },
+  "matrix": {
+    "fontSize": 18,                     // Character size in pixels
+    "matrixSpeed": 0.5,                 // Falling speed (higher = faster)
+    "trailLengthMin": 5,                // Minimum trail length in characters
+    "trailLengthMaxPercent": 0.8,       // Maximum trail as % of screen height
+    "fadeStartOpacity": 0.5,            // Starting opacity for trails (0.0-1.0)
+    "fadeExponent": 2,                  // Fade curve (higher = faster fade)
+    "backgroundFadeAlpha": 0.15,        // Background fade effect (0.0-1.0)
+    "resetProbability": 0.975           // Probability to NOT reset column
+  },
+  "colors": {
+    "primaryColor": "#00ff7f",          // Main matrix green
+    "goldColor": "#FFD700",             // Bitcoin amount highlighting
+    "gradientStartRGB": [0, 170, 85],   // UTXO gradient start [R, G, B]
+    "gradientEndRGB": [0, 136, 68]      // UTXO gradient end [R, G, B]
+  },
+  "api": {
+    "apiBase": "https://mempool.space/api",
+    "blockRefreshInterval": 30000,      // Check for new blocks (ms)
+    "ageUpdateInterval": 1000,          // Update block age display (ms)
+    "transactionFetchLimit": 15         // Number of transactions to fetch
+  },
+  "keyboard": {
+    "toggleKey": "s"                    // Key to toggle UI visibility
+  }
+}
 ```
+
+### Customization Examples
+
+**Faster, shorter trails:**
+```json
+"matrix": {
+  "matrixSpeed": 1.0,
+  "trailLengthMin": 3,
+  "trailLengthMaxPercent": 0.5
+}
+```
+
+**Show UI on load:**
+```json
+"display": {
+  "showUIOnLoad": true,
+  "initiallyCollapsed": false
+}
+```
+
+**More transaction data:**
+```json
+"api": {
+  "transactionFetchLimit": 30
+}
+```
+
+**Custom color scheme:**
+```json
+"colors": {
+  "primaryColor": "#00ffff",
+  "gradientStartRGB": [0, 255, 255],
+  "gradientEndRGB": [0, 128, 255]
+}
+```
+
+**Note:** The application falls back to default values if `config.json` is missing or invalid.
 
 ## Usage
 
@@ -73,6 +135,24 @@ python -m http.server 8000
 
 - **Click overlay panel** - Expand/collapse block details
 - **Hover overlay** - Enhanced glow effect
+
+## Web Hosting
+
+Deploy both `index.html` and `config.json` to any static web hosting service:
+
+- **GitHub Pages**: Push to a GitHub repository and enable Pages
+- **Netlify**: Drag and drop the files or connect to your repository
+- **Vercel**: Deploy with `vercel deploy`
+- **AWS S3**: Upload to an S3 bucket with static website hosting enabled
+- **Any HTTP server**: Apache, Nginx, or simple Python server
+
+Example with Python:
+```bash
+python -m http.server 8000
+# Visit http://localhost:8000
+```
+
+**Important:** Both `index.html` and `config.json` must be in the same directory for the application to load configuration properly.
 
 ## Technical Details
 
@@ -103,9 +183,10 @@ Requires a modern browser with support for:
 ## Performance
 
 - Character history buffers capped at screen height
-- Efficient rendering with position change detection
-- Color arrays pre-computed per character pool
-- Background fade optimizes trail clearing
+- Configuration UI editor
+- Mobile touch controls
+- Screenshot/export functionality
+- Additional color themes and presets clearing
 
 ## License
 

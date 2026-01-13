@@ -1,0 +1,32 @@
+{
+  "display": {
+    "headerColumnPercentage": 0.25,
+    "showUIOnLoad": false,
+    "initiallyCollapsed": true
+  },
+  "matrix": {
+    "fontSize": 18,
+    "matrixSpeed": 0.5,
+    "trailLengthMin": 5,
+    "trailLengthMaxPercent": 0.8,
+    "fadeStartOpacity": 0.5,
+    "fadeExponent": 2,
+    "backgroundFadeAlpha": 0.15,
+    "resetProbability": 0.975
+  },
+  "colors": {
+    "primaryColor": "#00ff7f",
+    "goldColor": "#FFD700",
+    "gradientStartRGB": [0, 170, 85],
+    "gradientEndRGB": [0, 136, 68]
+  },
+  "api": {
+    "apiBase": "https://mempool.space/api",
+    "blockRefreshInterval": 30000,
+    "ageUpdateInterval": 1000,
+    "transactionFetchLimit": 15
+  },
+  "keyboard": {
+    "toggleKey": "s"
+  }
+}

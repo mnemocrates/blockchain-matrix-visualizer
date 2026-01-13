@@ -85,11 +85,80 @@
   <div id="status" class="hidden-ui">Matrix connected to mempool.space…</div>
 
   <script>
+    // ===== CONFIGURATION LOADING =====
+    let CONFIG = null;
+    
+    async function loadConfig() {
+      try {
+        const response = await fetch('config.json');
+        if (!response.ok) throw new Error('Config file not found');
+        const config = await response.json();
+        
+        // Flatten the nested structure for easier access
+        return {
+          // Display Layout
+          headerColumnPercentage: config.display.headerColumnPercentage,
+          showUIOnLoad: config.display.showUIOnLoad,
+          initiallyCollapsed: config.display.initiallyCollapsed,
+          
+          // Matrix Visual Settings
+          fontSize: config.matrix.fontSize,
+          matrixSpeed: config.matrix.matrixSpeed,
+          trailLengthMin: config.matrix.trailLengthMin,
+          trailLengthMaxPercent: config.matrix.trailLengthMaxPercent,
+          fadeStartOpacity: config.matrix.fadeStartOpacity,
+          fadeExponent: config.matrix.fadeExponent,
+          backgroundFadeAlpha: config.matrix.backgroundFadeAlpha,
+          resetProbability: config.matrix.resetProbability,
+          
+          // Colors
+          primaryColor: config.colors.primaryColor,
+          goldColor: config.colors.goldColor,
+          gradientStartRGB: config.colors.gradientStartRGB,
+          gradientEndRGB: config.colors.gradientEndRGB,
+          
+          // API Settings
+          apiBase: config.api.apiBase,
+          blockRefreshInterval: config.api.blockRefreshInterval,
+          ageUpdateInterval: config.api.ageUpdateInterval,
+          transactionFetchLimit: config.api.transactionFetchLimit,
+          
+          // Keyboard
+          toggleKey: config.keyboard.toggleKey,
+        };
+      } catch (error) {
+        console.error('Failed to load config, using defaults:', error);
+        // Return default configuration
+        return {
+          headerColumnPercentage: 0.25,
+          showUIOnLoad: false,
+          initiallyCollapsed: true,
+          fontSize: 18,
+          matrixSpeed: 0.5,
+          trailLengthMin: 5,
+          trailLengthMaxPercent: 0.8,
+          fadeStartOpacity: 0.5,
+          fadeExponent: 2,
+          backgroundFadeAlpha: 0.15,
+          resetProbability: 0.975,
+          primaryColor: '#00ff7f',
+          goldColor: '#FFD700',
+          gradientStartRGB: [0, 170, 85],
+          gradientEndRGB: [0, 136, 68],
+          apiBase: 'https://mempool.space/api',
+          blockRefreshInterval: 30000,
+          ageUpdateInterval: 1000,
+          transactionFetchLimit: 15,
+          toggleKey: 's',
+        };
+      }
+    }
+
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
     let W = window.innerWidth, H = window.innerHeight;
-    const fontSize = 18;
+    let fontSize = 18; // Will be updated from config
     canvas.width = W; canvas.height = H;
 
     let columns = Math.floor(W / fontSize);
@@ -110,9 +179,9 @@
       columnPools = Array(columns).fill('');
       columnPoolColors = Array(columns).fill(null).map(() => []);
       columnIndex = Array(columns).fill(0);
-      columnHue = Array(columns).fill('#00ff7f');
-      const maxTrail = Math.floor(H / fontSize * 0.8); // Up to 80% of screen
-      columnTrailLength = Array(columns).fill(0).map(() => Math.floor(5 + Math.random() * (maxTrail - 5)));
+      columnHue = Array(columns).fill(CONFIG.primaryColor);
+      const maxTrail = Math.floor(H / fontSize * CONFIG.trailLengthMaxPercent);
+      columnTrailLength = Array(columns).fill(0).map(() => Math.floor(CONFIG.trailLengthMin + Math.random() * (maxTrail - CONFIG.trailLengthMin)));
       columnChars = Array(columns).fill('');
       columnLastPos = Array(columns).fill(-1);
       columnCharHistory = Array(columns).fill(null).map(() => []);
@@ -135,7 +204,7 @@
     }
 
     function drawMatrix() {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+      ctx.fillStyle = `rgba(0, 0, 0, ${CONFIG.backgroundFadeAlpha})`;
       ctx.fillRect(0, 0, W, H);
       ctx.font = `${fontSize}px monospace`;
 
@@ -166,7 +235,7 @@
 
         // Bright leading character
         const isGoldChar = columnColorHistory[i][0];
-        ctx.fillStyle = isGoldChar ? '#FFD700' : columnHue[i];
+        ctx.fillStyle = isGoldChar ? CONFIG.goldColor : columnHue[i];
         ctx.fillText(ch, x, y);
 
         // Draw variable length fading trail
@@ -196,16 +265,17 @@
           const trailY = y - (j * fontSize);
           if (trailY < -fontSize || trailY > H) continue;
           
-          // Exponential fade: starts at 50% and drops rapidly
+          // Exponential fade with configurable parameters
           const fadeRatio = j / trailLen;
-          const opacity = 0.5 * Math.pow(1 - fadeRatio, 2);
+          const opacity = CONFIG.fadeStartOpacity * Math.pow(1 - fadeRatio, CONFIG.fadeExponent);
           
           if (opacity > 0.05) {
             // Use character from history if available, otherwise current char
             const trailChar = history[j] || ch;
             const trailIsGold = columnColorHistory[i][j];
             if (trailIsGold) {
-              ctx.fillStyle = `rgba(255, 215, 0, ${opacity})`;
+              const [gr, gg, gb] = [255, 215, 0]; // Gold RGB
+              ctx.fillStyle = `rgba(${gr}, ${gg}, ${gb}, ${opacity})`;
             } else {
               ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${opacity})`;
             }
@@ -213,8 +283,8 @@
           }
         }
 
-        if (y > H && Math.random() > 0.975) drops[i] = 0;
-        drops[i] += 0.5; // Slow movement but characters stay on grid
+        if (y > H && Math.random() > CONFIG.resetProbability) drops[i] = 0;
+        drops[i] += CONFIG.matrixSpeed;
       }
       requestAnimationFrame(drawMatrix);
     }
@@ -222,16 +292,35 @@
     initColumns();
     drawMatrix();
 
+    // ===== Initialize UI Visibility =====
+    const overlayEl = document.getElementById('overlay');
+    const statusEl = document.getElementById('status');
+    
+    function applyUIVisibility() {
+      if (!CONFIG.showUIOnLoad) {
+        // UI starts hidden (keep hidden-ui class)
+      } else {
+        // Show UI on load
+        overlayEl.classList.remove('hidden-ui');
+        statusEl.classList.remove('hidden-ui');
+      }
+      
+      if (!CONFIG.initiallyCollapsed) {
+        overlayEl.classList.remove('collapsed');
+      }
+    }
+
     // ===== Keyboard Toggle =====
     window.addEventListener('keydown', (e) => {
-      if (e.key === 's' || e.key === 'S') {
+      if (!CONFIG) return;
+      const key = e.key.toLowerCase();
+      if (key === CONFIG.toggleKey.toLowerCase()) {
         overlayEl.classList.toggle('hidden-ui');
         statusEl.classList.toggle('hidden-ui');
       }
     });
 
     // ===== Expandable Header =====
-    const overlayEl = document.getElementById('overlay');
     overlayEl.addEventListener('click', () => {
       overlayEl.classList.toggle('collapsed');
     });
@@ -241,10 +330,9 @@
     const agePill = document.getElementById('age');
     const txPill = document.getElementById('txcount');
     const infoEl = document.getElementById('block-info');
-    const statusEl = document.getElementById('status');
     const sourceLink = document.getElementById('sourceLink');
 
-    const API_BASE = 'https://mempool.space/api';
+    let API_BASE = 'https://mempool.space/api';
     let lastHash = null;
     let latestBlock = null;
     let latestGlyphs = null;
@@ -310,18 +398,18 @@
 
     function assignPoolsFromData(data) {
       if (!data) return;
-      const headerCols = Math.max(1, Math.floor(columns * 0.25)); // Left 25% for header
+      const headerCols = Math.max(1, Math.floor(columns * CONFIG.headerColumnPercentage));
       
       for (let i = 0; i < columns; i++) {
         let pool = '';
         let poolColors = [];
-        let hue = '#00ff7f';
+        let hue = CONFIG.primaryColor;
         
         if (i < headerCols) {
           // Left: Block header data - no gold
           pool = data.headerData || '';
           poolColors = Array(pool.length).fill(false);
-          hue = '#00ff7f';
+          hue = CONFIG.primaryColor;
         } else {
           // Right: UTXO data with gradient - mark bitcoin amounts as gold
           pool = data.utxoData || '';
@@ -342,11 +430,13 @@
             }
           }
           const progress = (i - headerCols) / (columns - headerCols);
-          const g = Math.floor(170 - progress * 34); // 170 -> 136
-          const b = Math.floor(85 - progress * 17);  // 85 -> 68
-          hue = `rgb(0, ${g}, ${b})`;
+          const [startR, startG, startB] = CONFIG.gradientStartRGB;
+          const [endR, endG, endB] = CONFIG.gradientEndRGB;
+          const r = Math.floor(startR + progress * (endR - startR));
+          const g = Math.floor(startG + progress * (endG - startG));
+          const b = Math.floor(startB + progress * (endB - startB));
+          hue = `rgb(${r}, ${g}, ${b})`;
         }
-
         if (!pool || !pool.length) {
           pool = '0123456789abcdef';
           poolColors = Array(pool.length).fill(false);
@@ -359,8 +449,8 @@
       
       // Ensure trail lengths are initialized
       if (columnTrailLength.length !== columns) {
-        const maxTrail = Math.floor(H / fontSize * 0.8);
-        columnTrailLength = Array(columns).fill(0).map(() => Math.floor(5 + Math.random() * (maxTrail - 5)));
+        const maxTrail = Math.floor(H / fontSize * CONFIG.trailLengthMaxPercent);
+        columnTrailLength = Array(columns).fill(0).map(() => Math.floor(CONFIG.trailLengthMin + Math.random() * (maxTrail - CONFIG.trailLengthMin)));
       }
     }
 
@@ -426,9 +516,9 @@
           coinbaseAscii
         ].join(' ').toLowerCase().replace(/[^a-z0-9 ]/g, '');
 
-        // Fetch UTXO data from first 15 transactions
+        // Fetch UTXO data from configured number of transactions
         const utxoStrings = [];
-        const txLimit = Math.min(15, txids.length);
+        const txLimit = Math.min(CONFIG.transactionFetchLimit, txids.length);
         setStatus(`Fetching UTXO data (${txLimit} transactions)…`);
         
         for (let i = 0; i < txLimit; i++) {
@@ -473,9 +563,23 @@
       }
     }
 
-    refreshLatestBlock();
-    setInterval(refreshLatestBlock, 30000);
-    setInterval(() => updateAgePill(latestBlock), 1000);
+    // ===== Initialize Application =====
+    async function initApp() {
+      CONFIG = await loadConfig();
+      fontSize = CONFIG.fontSize;
+      API_BASE = CONFIG.apiBase;
+      
+      // Apply UI visibility settings
+      applyUIVisibility();
+      
+      // Start block updates
+      refreshLatestBlock();
+      setInterval(refreshLatestBlock, CONFIG.blockRefreshInterval);
+      setInterval(() => updateAgePill(latestBlock), CONFIG.ageUpdateInterval);
+    }
+
+    // Start the application
+    initApp();
   </script>
 </body>
 </html>
