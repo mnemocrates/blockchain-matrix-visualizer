@@ -138,15 +138,6 @@
       ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
       ctx.fillRect(0, 0, W, H);
       ctx.font = `${fontSize}px monospace`;
-      
-      // Rotate transactions every 20 seconds if we have transactions
-      if (allTransactionData.length > 0 && Date.now() - lastRotationTime > 20000) {
-        const headerCols = Math.max(1, Math.floor(columns * 0.25));
-        const txCols = columns - headerCols;
-        transactionOffset = (transactionOffset + txCols) % allTransactionData.length;
-        lastRotationTime = Date.now();
-        assignPoolsFromData(latestGlyphs);
-      }
 
       for (let i = 0; i < drops.length; i++) {
         const currentPos = Math.floor(drops[i]);
@@ -257,9 +248,6 @@
     let lastHash = null;
     let latestBlock = null;
     let latestGlyphs = null;
-    let allTransactionData = []; // Array of transaction data strings
-    let transactionOffset = 0; // Current offset for transaction rotation
-    let lastRotationTime = Date.now();
 
     function setStatus(msg) { statusEl.textContent = msg; }
     function toLowerStr(val) { return (val ?? '') === '' ? '' : String(val).toLowerCase(); }
@@ -323,7 +311,6 @@
     function assignPoolsFromData(data) {
       if (!data) return;
       const headerCols = Math.max(1, Math.floor(columns * 0.25)); // Left 25% for header
-      const txCols = columns - headerCols; // Number of transaction columns
       
       for (let i = 0; i < columns; i++) {
         let pool = '';
@@ -336,10 +323,8 @@
           poolColors = Array(pool.length).fill(false);
           hue = '#00ff7f';
         } else {
-          // Right: Assign one transaction per column
-          const colIndex = i - headerCols;
-          const txIndex = (transactionOffset + colIndex) % Math.max(1, allTransactionData.length);
-          pool = allTransactionData[txIndex] || '';
+          // Right: UTXO data with gradient - mark bitcoin amounts as gold
+          pool = data.utxoData || '';
           poolColors = Array(pool.length).fill(false);
           // Find bitcoin symbols and mark them + following digits as gold
           for (let j = 0; j < pool.length; j++) {
@@ -356,7 +341,7 @@
               }
             }
           }
-          const progress = colIndex / Math.max(1, txCols - 1);
+          const progress = (i - headerCols) / (columns - headerCols);
           const g = Math.floor(170 - progress * 34); // 170 -> 136
           const b = Math.floor(85 - progress * 17);  // 85 -> 68
           hue = `rgb(0, ${g}, ${b})`;
@@ -441,23 +426,21 @@
           coinbaseAscii
         ].join(' ').toLowerCase().replace(/[^a-z0-9 ]/g, '');
 
-        // Fetch ALL transactions from the block
-        allTransactionData = [];
-        transactionOffset = 0;
-        lastRotationTime = Date.now();
-        setStatus(`Fetching all ${txids.length} transactions…`);
+        // Fetch UTXO data from first 15 transactions
+        const utxoStrings = [];
+        const txLimit = Math.min(15, txids.length);
+        setStatus(`Fetching UTXO data (${txLimit} transactions)…`);
         
-        for (let i = 0; i < txids.length; i++) {
+        for (let i = 0; i < txLimit; i++) {
           try {
             const tx = await fetchTx(txids[i]);
-            const txData = [];
             // Extract outputs (UTXOs)
             if (tx.vout) {
               for (const out of tx.vout) {
                 const addr = out.scriptpubkey_address || 'unknown';
                 const sats = out.value || 0;
                 const btc = (sats / 100000000).toFixed(8);
-                txData.push(`${addr} ₿${btc}`);
+                utxoStrings.push(`${addr} ₿${btc} ${tx.txid}`);
               }
             }
             // Extract inputs (previous outputs being spent)
@@ -467,21 +450,18 @@
                   const addr = inp.prevout.scriptpubkey_address || 'unknown';
                   const sats = inp.prevout.value || 0;
                   const btc = (sats / 100000000).toFixed(8);
-                  txData.push(`${addr} ₿${btc}`);
+                  utxoStrings.push(`${addr} ₿${btc} ${tx.txid}`);
                 }
               }
             }
-            // Add transaction ID at the end
-            txData.push(tx.txid);
-            const txString = txData.join(' ').toLowerCase().replace(/[^a-z0-9₿. ]/g, '');
-            allTransactionData.push(txString);
           } catch (e) {
             console.warn(`Failed to fetch tx ${txids[i]}:`, e);
-            allTransactionData.push('error');
           }
         }
+
+        const utxoData = utxoStrings.join(' ').toLowerCase().replace(/[^a-z0-9₿. ]/g, '');
         
-        const data = { headerData };
+        const data = { headerData, utxoData };
         latestGlyphs = data;
         assignPoolsFromData(data);
 
