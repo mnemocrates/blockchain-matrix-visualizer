@@ -63,12 +63,13 @@
     }
     a { color: var(--matrix-green); text-decoration: none; }
     a:hover { text-decoration: underline; }
+    .hidden-ui { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
   </style>
 </head>
 <body>
   <canvas id="canvas"></canvas>
 
-  <div id="overlay" class="collapsed">
+  <div id="overlay" class="collapsed hidden-ui">
     <h1>
       Latest Block ▮ Bitcoin <span class="pill">main</span>
       <span id="height" class="pill">Height: —</span>
@@ -81,7 +82,7 @@
     <div id="legend">⬅︎ Block Header (left ~25%) • UTXO Data: addresses, amounts ₿, hashes (right ~75%)</div>
   </div>
 
-  <div id="status">Matrix connected to mempool.space…</div>
+  <div id="status" class="hidden-ui">Matrix connected to mempool.space…</div>
 
   <script>
     const canvas = document.getElementById('canvas');
@@ -220,6 +221,14 @@
 
     initColumns();
     drawMatrix();
+
+    // ===== Keyboard Toggle =====
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 's' || e.key === 'S') {
+        overlayEl.classList.toggle('hidden-ui');
+        statusEl.classList.toggle('hidden-ui');
+      }
+    });
 
     // ===== Expandable Header =====
     const overlayEl = document.getElementById('overlay');
