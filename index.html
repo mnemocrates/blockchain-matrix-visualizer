@@ -125,6 +125,11 @@
           
           // Keyboard
           toggleKey: config.keyboard.toggleKey,
+          
+          // Transitions
+          transitionEffect: config.transitions?.effectType || 'none',
+          glitchDuration: config.transitions?.glitchDuration || 300,
+          glitchIntensity: config.transitions?.glitchIntensity || 0.15,
         };
       } catch (error) {
         console.error('Failed to load config, using defaults:', error);
@@ -150,6 +155,9 @@
           ageUpdateInterval: 1000,
           transactionFetchLimit: 15,
           toggleKey: 's',
+          transitionEffect: 'none',
+          glitchDuration: 300,
+          glitchIntensity: 0.15,
         };
       }
     }
@@ -172,6 +180,67 @@
     let columnLastPos = []; // Track last integer position
     let columnCharHistory = []; // History buffer for trailing characters
     let columnColorHistory = []; // Color history for each character
+    
+    // ===== TRANSITION EFFECTS =====
+    let transitionActive = false;
+    let transitionStartTime = 0;
+    let glitchOriginalPools = [];
+    let glitchOriginalIndices = [];
+
+    function triggerTransition() {
+      if (!CONFIG || CONFIG.transitionEffect === 'none') return;
+      
+      transitionActive = true;
+      transitionStartTime = Date.now();
+      
+      // Prepare effect-specific data
+      if (CONFIG.transitionEffect === 'glitch') {
+        // Store original state
+        glitchOriginalPools = columnPools.map(p => p);
+        glitchOriginalIndices = columnIndex.map(i => i);
+      }
+    }
+    
+    function applyGlitchEffect() {
+      const elapsed = Date.now() - transitionStartTime;
+      const duration = CONFIG.glitchDuration;
+      
+      if (elapsed >= duration) {
+        // Restore original state
+        transitionActive = false;
+        return;
+      }
+      
+      // Randomly scramble characters based on intensity
+      const glitchChars = '!@#$%^&*()_+-=[]{}|;:,.<>?/~`';
+      for (let i = 0; i < columns; i++) {
+        if (Math.random() < CONFIG.glitchIntensity) {
+          // Scramble this column's character
+          if (Math.random() < 0.5) {
+            // Use random glitch character
+            columnChars[i] = glitchChars[Math.floor(Math.random() * glitchChars.length)];
+          } else {
+            // Use random character from a different column's pool
+            const randomCol = Math.floor(Math.random() * columns);
+            const randomPool = columnPools[randomCol] || glitchChars;
+            columnChars[i] = randomPool[Math.floor(Math.random() * randomPool.length)];
+          }
+        }
+      }
+    }
+    
+    function updateTransition() {
+      if (!transitionActive) return;
+      
+      switch (CONFIG.transitionEffect) {
+        case 'glitch':
+          applyGlitchEffect();
+          break;
+        // Future effects can be added here:
+        // case 'cascade': applyCascadeEffect(); break;
+        // case 'flash': applyFlashEffect(); break;
+      }
+    }
 
     function initColumns() {
       columns = Math.floor(W / fontSize);
@@ -204,6 +273,9 @@
     }
 
     function drawMatrix() {
+      // Update transition effects
+      updateTransition();
+      
       ctx.fillStyle = `rgba(0, 0, 0, ${CONFIG.backgroundFadeAlpha})`;
       ctx.fillRect(0, 0, W, H);
       ctx.font = `${fontSize}px monospace`;
@@ -488,6 +560,9 @@
         const block = await fetchBlockByHash(tipHash);
         latestBlock = block;
         lastHash = tipHash;
+        
+        // Trigger transition effect for new block
+        triggerTransition();
 
         let txids = [];
         try { txids = await fetchBlockTxids(tipHash); } catch {}

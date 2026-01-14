@@ -28,5 +28,10 @@
   },
   "keyboard": {
     "toggleKey": "s"
+  },
+  "transitions": {
+    "effectType": "glitch",
+    "glitchDuration": 300,
+    "glitchIntensity": 0.15
   }
 }
