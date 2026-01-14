@@ -243,6 +243,8 @@
     }
 
     function initColumns() {
+      if (!CONFIG) return; // Wait for config to load
+      
       columns = Math.floor(W / fontSize);
       drops = Array(columns).fill(0).map(() => Math.random() * H / fontSize);
       columnPools = Array(columns).fill('');
@@ -260,8 +262,10 @@
     window.addEventListener('resize', () => {
       W = window.innerWidth; H = window.innerHeight;
       canvas.width = W; canvas.height = H;
-      initColumns();
-      assignPoolsFromData(latestGlyphs);
+      if (CONFIG) {
+        initColumns();
+        assignPoolsFromData(latestGlyphs);
+      }
     });
 
     function nextGlyph(i) {
@@ -360,9 +364,6 @@
       }
       requestAnimationFrame(drawMatrix);
     }
-
-    initColumns();
-    drawMatrix();
 
     // ===== Initialize UI Visibility =====
     const overlayEl = document.getElementById('overlay');
@@ -643,6 +644,10 @@
       CONFIG = await loadConfig();
       fontSize = CONFIG.fontSize;
       API_BASE = CONFIG.apiBase;
+      
+      // Initialize matrix after config is loaded
+      initColumns();
+      drawMatrix();
       
       // Apply UI visibility settings
       applyUIVisibility();
