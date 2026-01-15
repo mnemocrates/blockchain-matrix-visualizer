@@ -19,6 +19,7 @@
   "colors": {
     "primaryColor": "#00ff7f",
     "goldColor": "#FFD700",
+    "cyclingColor": "#00ffff",
     "gradientStartRGB": [0, 170, 85],
     "gradientEndRGB": [0, 136, 68]
   },

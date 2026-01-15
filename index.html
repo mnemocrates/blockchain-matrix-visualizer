@@ -116,6 +116,7 @@
           // Colors
           primaryColor: config.colors.primaryColor,
           goldColor: config.colors.goldColor,
+          cyclingColor: config.colors.cyclingColor || '#00ffff',
           gradientStartRGB: config.colors.gradientStartRGB,
           gradientEndRGB: config.colors.gradientEndRGB,
           
@@ -152,6 +153,7 @@
           headCycleChars: 'abcdefghijklmnopqrstuvwxyz0123456789',
           primaryColor: '#00ff7f',
           goldColor: '#FFD700',
+          cyclingColor: '#00ffff',
           gradientStartRGB: [0, 170, 85],
           gradientEndRGB: [0, 136, 68],
           apiBase: 'https://mempool.space/api',
@@ -336,8 +338,8 @@
 
         // Bright leading character (always at full brightness during cycling)
         if (columnCycleFrames[i] > 0) {
-          // Cycling: use primary color at full brightness
-          ctx.fillStyle = columnHue[i];
+          // Cycling: use bright cyan color for emphasis
+          ctx.fillStyle = CONFIG.cyclingColor;
         } else {
           // Normal: use appropriate color (gold for bitcoin amounts)
           const isGoldChar = columnColorHistory[i][0];
@@ -533,13 +535,8 @@
               }
             }
           }
-          const progress = (i - headerCols) / (columns - headerCols);
-          const [startR, startG, startB] = CONFIG.gradientStartRGB;
-          const [endR, endG, endB] = CONFIG.gradientEndRGB;
-          const r = Math.floor(startR + progress * (endR - startR));
-          const g = Math.floor(startG + progress * (endG - startG));
-          const b = Math.floor(startB + progress * (endB - startB));
-          hue = `rgb(${r}, ${g}, ${b})`;
+          // Use uniform color for consistent brightness across screen
+          hue = CONFIG.primaryColor;
         }
         if (!pool || !pool.length) {
           pool = '0123456789abcdef';
