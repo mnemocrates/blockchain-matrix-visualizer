@@ -12,7 +12,9 @@
     "fadeStartOpacity": 0.5,
     "fadeExponent": 2,
     "backgroundFadeAlpha": 0.15,
-    "resetProbability": 0.975
+    "resetProbability": 0.975,
+    "headCycleFrames": 8,
+    "headCycleChars": "abcdefghijklmnopqrstuvwxyz0123456789"
   },
   "colors": {
     "primaryColor": "#00ff7f",

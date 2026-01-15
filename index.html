@@ -110,6 +110,8 @@
           fadeExponent: config.matrix.fadeExponent,
           backgroundFadeAlpha: config.matrix.backgroundFadeAlpha,
           resetProbability: config.matrix.resetProbability,
+          headCycleFrames: config.matrix.headCycleFrames || 8,
+          headCycleChars: config.matrix.headCycleChars || 'abcdefghijklmnopqrstuvwxyz0123456789',
           
           // Colors
           primaryColor: config.colors.primaryColor,
@@ -146,6 +148,8 @@
           fadeExponent: 2,
           backgroundFadeAlpha: 0.15,
           resetProbability: 0.975,
+          headCycleFrames: 8,
+          headCycleChars: 'abcdefghijklmnopqrstuvwxyz0123456789',
           primaryColor: '#00ff7f',
           goldColor: '#FFD700',
           gradientStartRGB: [0, 170, 85],
@@ -180,6 +184,8 @@
     let columnLastPos = []; // Track last integer position
     let columnCharHistory = []; // History buffer for trailing characters
     let columnColorHistory = []; // Color history for each character
+    let columnCycleFrames = []; // Remaining frames to cycle head character
+    let columnActualChar = []; // The actual character to display after cycling
     
     // ===== TRANSITION EFFECTS =====
     let transitionActive = false;
@@ -257,6 +263,8 @@
       columnLastPos = Array(columns).fill(-1);
       columnCharHistory = Array(columns).fill(null).map(() => []);
       columnColorHistory = Array(columns).fill(null).map(() => []);
+      columnCycleFrames = Array(columns).fill(0);
+      columnActualChar = Array(columns).fill('');
     }
 
     window.addEventListener('resize', () => {
@@ -288,16 +296,34 @@
         const currentPos = Math.floor(drops[i]);
         // Only get new character when position changes
         if (currentPos !== columnLastPos[i]) {
-          columnChars[i] = nextGlyph(i);
+          columnActualChar[i] = nextGlyph(i);
           columnLastPos[i] = currentPos;
-          // Get color from pool color array
+          // Start cycling animation at head
+          columnCycleFrames[i] = CONFIG.headCycleFrames;
+        }
+        
+        // Handle head character cycling
+        if (columnCycleFrames[i] > 0) {
+          // Cycle through random characters from cycle pool
+          const cyclePool = CONFIG.headCycleChars;
+          columnChars[i] = cyclePool[Math.floor(Math.random() * cyclePool.length)];
+          columnCycleFrames[i]--;
+        } else {
+          // Cycling complete, use actual character
+          columnChars[i] = columnActualChar[i];
+        }
+        
+        // Update history only when cycling completes
+        if (columnCycleFrames[i] === 0 && currentPos === columnLastPos[i]) {
           const ch = columnChars[i];
+          // Get color from pool color array
           const poolColors = columnPoolColors[i];
           const idx = (columnIndex[i] - 1 + poolColors.length) % poolColors.length;
           const isGold = poolColors[idx] || false;
-          // Add new character and its color to history buffers
-          columnCharHistory[i].unshift(ch);
-          columnColorHistory[i].unshift(isGold);
+          // Add new character and its color to history buffers (only once)
+          if (columnCharHistory[i][0] !== ch || columnLastPos[i] !== currentPos) {
+            columnCharHistory[i].unshift(ch);
+            columnColorHistory[i].unshift(isGold);
           // Keep history buffer size manageable (max trail length + some extra)
           const maxHistory = Math.floor(H / fontSize);
           if (columnCharHistory[i].length > maxHistory) {
@@ -309,9 +335,15 @@
         const x = i * fontSize;
         const y = currentPos * fontSize;
 
-        // Bright leading character
-        const isGoldChar = columnColorHistory[i][0];
-        ctx.fillStyle = isGoldChar ? CONFIG.goldColor : columnHue[i];
+        // Bright leading character (always at full brightness during cycling)
+        if (columnCycleFrames[i] > 0) {
+          // Cycling: use primary color at full brightness
+          ctx.fillStyle = columnHue[i];
+        } else {
+          // Normal: use appropriate color (gold for bitcoin amounts)
+          const isGoldChar = columnColorHistory[i][0];
+          ctx.fillStyle = isGoldChar ? CONFIG.goldColor : columnHue[i];
+        }
         ctx.fillText(ch, x, y);
 
         // Draw variable length fading trail
