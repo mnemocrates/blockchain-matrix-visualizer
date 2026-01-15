@@ -315,22 +315,23 @@
         
         // Update history only when cycling completes
         if (columnCycleFrames[i] === 0 && currentPos === columnLastPos[i]) {
-          const ch = columnChars[i];
           // Get color from pool color array
           const poolColors = columnPoolColors[i];
           const idx = (columnIndex[i] - 1 + poolColors.length) % poolColors.length;
           const isGold = poolColors[idx] || false;
           // Add new character and its color to history buffers (only once)
-          if (columnCharHistory[i][0] !== ch || columnLastPos[i] !== currentPos) {
-            columnCharHistory[i].unshift(ch);
+          if (columnCharHistory[i][0] !== columnChars[i]) {
+            columnCharHistory[i].unshift(columnChars[i]);
             columnColorHistory[i].unshift(isGold);
-          // Keep history buffer size manageable (max trail length + some extra)
-          const maxHistory = Math.floor(H / fontSize);
-          if (columnCharHistory[i].length > maxHistory) {
-            columnCharHistory[i].length = maxHistory;
-            columnColorHistory[i].length = maxHistory;
+            // Keep history buffer size manageable (max trail length + some extra)
+            const maxHistory = Math.floor(H / fontSize);
+            if (columnCharHistory[i].length > maxHistory) {
+              columnCharHistory[i].length = maxHistory;
+              columnColorHistory[i].length = maxHistory;
+            }
           }
         }
+        
         const ch = columnChars[i];
         const x = i * fontSize;
         const y = currentPos * fontSize;
