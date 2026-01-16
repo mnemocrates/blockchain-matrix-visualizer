@@ -345,6 +345,75 @@
       50% { transform: translate(-1px, 1px); opacity: 0.85; }
       60% { transform: translate(1px, -1px); opacity: 0.95; }
     }
+    
+    /* Menu Hint Styles */
+    #menu-hint {
+      position: fixed; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.9);
+      border: 2px solid var(--matrix-green);
+      padding: 1.5rem 2rem;
+      border-radius: 8px;
+      color: var(--matrix-green);
+      font-family: var(--mono);
+      font-size: 1.2rem;
+      text-align: center;
+      box-shadow: 0 0 30px rgba(0, 255, 127, 0.5);
+      z-index: 300;
+      opacity: 0;
+      pointer-events: none;
+      animation: hintFadeInOut 5s ease forwards;
+    }
+    @keyframes hintFadeInOut {
+      0% { opacity: 0; }
+      10% { opacity: 1; }
+      85% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+    #menu-hint.hidden { display: none; }
+    
+    /* FAB Button Styles */
+    #fab-menu {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: rgba(0, 20, 10, 0.95);
+      border: 2px solid var(--matrix-green);
+      color: var(--matrix-green);
+      font-size: 1.8rem;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 0 20px rgba(0, 255, 127, 0.4);
+      z-index: 150;
+      transition: all 0.3s ease;
+      font-family: var(--mono);
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #fab-menu:active {
+      transform: scale(0.95);
+      box-shadow: 0 0 30px rgba(0, 255, 127, 0.6);
+    }
+    #fab-menu.visible {
+      display: flex;
+    }
+    
+    /* Touch device adjustments */
+    @media (hover: none) and (pointer: coarse) {
+      #menu-bar {
+        /* On touch devices, menu bar can appear without keyboard */
+        user-select: none;
+      }
+      .menu-item {
+        padding: 0.75rem 1rem;
+        font-size: 1.1rem;
+      }
+    }
   </style>
 </head>
 <body>
@@ -381,6 +450,16 @@
       </div>
       <div id="panel-content"></div>
     </div>
+  </div>
+
+  <!-- Menu Hint (Desktop only) -->
+  <div id="menu-hint" class="hidden">
+    Press <strong>/</strong> for menu
+  </div>
+
+  <!-- FAB Button (Touch devices only) -->
+  <div id="fab-menu">
+    /
   </div>
 
   <script>
@@ -834,10 +913,53 @@
     const panelTitle = document.getElementById('panel-title');
     const panelContent = document.getElementById('panel-content');
     const panelClose = document.getElementById('panel-close');
+    const menuHint = document.getElementById('menu-hint');
+    const fabMenu = document.getElementById('fab-menu');
     
     let menuOpen = false;
     let panelOpen = false;
     let currentPanel = null;
+    let isTouchDevice = false;
+    
+    // Detect touch capability
+    function detectTouchDevice() {
+      return (('ontouchstart' in window) ||
+              (navigator.maxTouchPoints > 0) ||
+              (navigator.msMaxTouchPoints > 0));
+    }
+    
+    // Initialize touch/desktop UI
+    function initializeUI() {
+      isTouchDevice = detectTouchDevice();
+      
+      if (isTouchDevice) {
+        // Touch device: show FAB, hide hint
+        fabMenu.classList.add('visible');
+        menuHint.classList.add('hidden');
+      } else {
+        // Desktop: show hint briefly, hide FAB
+        fabMenu.classList.remove('visible');
+        menuHint.classList.remove('hidden');
+        
+        // Hide hint after animation completes (5 seconds)
+        setTimeout(() => {
+          menuHint.classList.add('hidden');
+        }, 5000);
+      }
+    }
+    
+    // FAB click handler
+    fabMenu.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (panelOpen) {
+        closePanel();
+        openMenu();
+      } else if (menuOpen) {
+        closeMenu();
+      } else {
+        openMenu();
+      }
+    });
     
     function openMenu() {
       menuBar.classList.remove('hidden');
@@ -1603,6 +1725,9 @@
       
       // Apply UI visibility settings
       applyUIVisibility();
+      
+      // Initialize touch/desktop UI
+      initializeUI();
       
       // Start block updates
       refreshLatestBlock();
