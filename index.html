@@ -1111,7 +1111,7 @@
       if (!CONFIG) return;
       const key = e.key.toLowerCase();
       
-      // ESC key handling
+      // ESC key handling (still available as alternative)
       if (key === 'escape') {
         if (panelOpen) {
           closePanel();
@@ -1121,10 +1121,20 @@
         return;
       }
       
-      // Menu activation with /
-      if (e.key === '/' && !menuOpen && !panelOpen) {
+      // "/" key navigation - acts as back/toggle
+      if (e.key === '/') {
         e.preventDefault();
-        openMenu();
+        if (panelOpen) {
+          // Panel is open: close panel and return to menu
+          closePanel();
+          openMenu();
+        } else if (menuOpen) {
+          // Menu is open: close menu
+          closeMenu();
+        } else {
+          // Nothing open: open menu
+          openMenu();
+        }
         return;
       }
       

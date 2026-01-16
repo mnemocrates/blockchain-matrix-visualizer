@@ -131,11 +131,11 @@ All visualization settings are stored in `config.json`, making it easy to custom
 
 ### Keyboard Shortcuts
 
-- **/** - Open menu to access Block Details and Node Monitor panels
+- **/** - Navigate back: Opens menu → Closes panel (returns to menu) → Closes menu
 - **b** - (when menu open) Open Block Details panel
 - **n** - (when menu open) Open Node Monitor panel
 - **s** - Toggle overlay panel and status indicator visibility
-- **ESC** - Close open panel or menu
+- **ESC** - Alternative close key (same behavior as /)
 
 ### Interactive Elements
 
