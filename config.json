@@ -35,6 +35,16 @@
   "keyboard": {
     "toggleKey": "s"
   },
+  "menu": {
+    "activationKey": "/",
+    "closeKey": "Escape",
+    "enabled": true
+  },
+  "panels": {
+    "defaultWidth": "70%",
+    "maxHeight": "80vh",
+    "animationDuration": 300
+  },
   "transitions": {
     "effectType": "glitch",
     "glitchDuration": 300,

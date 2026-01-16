@@ -64,6 +64,93 @@
     a { color: var(--matrix-green); text-decoration: none; }
     a:hover { text-decoration: underline; }
     .hidden-ui { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+    
+    /* Menu Bar Styles */
+    #menu-bar {
+      position: fixed; top: 0; left: 0; right: 0;
+      background: rgba(0, 0, 0, 0.85); border-bottom: 2px solid var(--matrix-green);
+      padding: 0.75rem 1.5rem; font-family: var(--mono);
+      display: flex; gap: 2rem; align-items: center;
+      box-shadow: 0 0 20px rgba(0, 255, 127, 0.3);
+      z-index: 100; transition: transform 0.3s ease;
+    }
+    #menu-bar.hidden { transform: translateY(-100%); }
+    .menu-item {
+      color: var(--matrix-green); cursor: pointer; font-size: 1rem;
+      letter-spacing: 0.05em; transition: all 0.2s ease;
+      text-shadow: 0 0 5px rgba(0, 255, 127, 0.5);
+    }
+    .menu-item:hover {
+      color: var(--matrix-green); text-shadow: 0 0 10px rgba(0, 255, 127, 0.8);
+      transform: translateY(-1px);
+    }
+    .menu-item u { text-decoration: underline; text-underline-offset: 3px; }
+    
+    /* Panel Overlay Styles */
+    #panel-overlay {
+      position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px); z-index: 200;
+      display: flex; align-items: center; justify-content: center;
+      transition: opacity 0.3s ease;
+    }
+    #panel-overlay.hidden { opacity: 0; pointer-events: none; }
+    #panel-container {
+      width: 70%; max-width: 1200px; max-height: 80vh;
+      background: rgba(0, 0, 0, 0.9);
+      border: 2px solid var(--matrix-green);
+      box-shadow: 0 0 30px rgba(0, 255, 127, 0.4), inset 0 0 30px rgba(0, 255, 127, 0.05);
+      font-family: var(--mono); color: var(--matrix-green);
+      display: flex; flex-direction: column;
+      animation: panelSlideIn 0.3s ease;
+    }
+    @keyframes panelSlideIn {
+      from { transform: translateY(-20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    #panel-header {
+      padding: 1rem 1.5rem; border-bottom: 1px solid var(--matrix-dim);
+      display: flex; justify-content: space-between; align-items: center;
+      background: rgba(0, 255, 127, 0.05);
+    }
+    #panel-title {
+      font-size: 1.2rem; font-weight: bold; letter-spacing: 0.1em;
+      text-transform: uppercase; text-shadow: 0 0 8px rgba(0, 255, 127, 0.6);
+    }
+    #panel-close {
+      cursor: pointer; font-size: 1.5rem; line-height: 1;
+      transition: all 0.2s ease; opacity: 0.7;
+    }
+    #panel-close:hover {
+      opacity: 1; transform: scale(1.2);
+      text-shadow: 0 0 10px rgba(0, 255, 127, 0.8);
+    }
+    #panel-content {
+      padding: 1.5rem; overflow-y: auto; flex: 1;
+      line-height: 1.6;
+    }
+    #panel-content::-webkit-scrollbar { width: 8px; }
+    #panel-content::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.5); }
+    #panel-content::-webkit-scrollbar-thumb {
+      background: var(--matrix-dim); border-radius: 4px;
+    }
+    #panel-content::-webkit-scrollbar-thumb:hover { background: var(--matrix-green); }
+    
+    .panel-section { margin-bottom: 1.5rem; }
+    .panel-section-title {
+      font-size: 1rem; font-weight: bold; margin-bottom: 0.5rem;
+      color: var(--matrix-green); text-transform: uppercase;
+      letter-spacing: 0.08em; border-bottom: 1px solid var(--matrix-dim);
+      padding-bottom: 0.3rem;
+    }
+    .panel-data-row {
+      display: flex; padding: 0.3rem 0; gap: 1rem;
+    }
+    .panel-data-label {
+      color: var(--matrix-dim); min-width: 150px;
+    }
+    .panel-data-value {
+      color: var(--matrix-green); word-break: break-all; flex: 1;
+    }
   </style>
 </head>
 <body>
@@ -83,6 +170,23 @@
   </div>
 
   <div id="status" class="hidden-ui">Matrix connected to mempool.space…</div>
+
+  <!-- Menu Bar -->
+  <div id="menu-bar" class="hidden">
+    <span class="menu-item" data-key="b" data-panel="blockDetails"><u>B</u>lock Details</span>
+    <span class="menu-item" data-key="n" data-panel="nodeMonitor"><u>N</u>ode Monitor</span>
+  </div>
+
+  <!-- Panel Overlay -->
+  <div id="panel-overlay" class="hidden">
+    <div id="panel-container">
+      <div id="panel-header">
+        <span id="panel-title"></span>
+        <span id="panel-close">✕</span>
+      </div>
+      <div id="panel-content"></div>
+    </div>
+  </div>
 
   <script>
     // ===== CONFIGURATION LOADING =====
@@ -529,10 +633,236 @@
       }
     }
 
-    // ===== Keyboard Toggle =====
+    // ===== Menu System =====
+    const menuBar = document.getElementById('menu-bar');
+    const panelOverlay = document.getElementById('panel-overlay');
+    const panelTitle = document.getElementById('panel-title');
+    const panelContent = document.getElementById('panel-content');
+    const panelClose = document.getElementById('panel-close');
+    
+    let menuOpen = false;
+    let panelOpen = false;
+    let currentPanel = null;
+    
+    function openMenu() {
+      menuBar.classList.remove('hidden');
+      menuOpen = true;
+    }
+    
+    function closeMenu() {
+      menuBar.classList.add('hidden');
+      menuOpen = false;
+    }
+    
+    function openPanel(panelType) {
+      currentPanel = panelType;
+      panelOpen = true;
+      panelOverlay.classList.remove('hidden');
+      
+      // Set panel title and content based on type
+      switch(panelType) {
+        case 'blockDetails':
+          panelTitle.textContent = 'Block Details';
+          renderBlockDetailsPanel();
+          break;
+        case 'nodeMonitor':
+          panelTitle.textContent = 'Node Monitor';
+          renderNodeMonitorPanel();
+          break;
+      }
+      
+      closeMenu(); // Close menu when panel opens
+    }
+    
+    function closePanel() {
+      panelOverlay.classList.add('hidden');
+      panelOpen = false;
+      currentPanel = null;
+    }
+    
+    // ===== Panel Renderers =====
+    function renderBlockDetailsPanel() {
+      if (!latestBlock) {
+        panelContent.innerHTML = '<div style="text-align: center; padding: 2rem;">No block data available</div>';
+        return;
+      }
+      
+      const block = latestBlock;
+      const reward = (block.extras?.reward || 0) / 100000000;
+      const fees = (block.extras?.totalFees || 0) / 100000000;
+      const medianFee = block.extras?.medianFee || 0;
+      const feeRange = block.extras?.feeRange || [];
+      const avgFee = block.extras?.avgFee || 0;
+      const utxoSetChange = block.extras?.utxoSetChange || 0;
+      const avgFeeRate = block.extras?.avgFeeRate || 0;
+      
+      const timestamp = new Date(block.timestamp * 1000).toLocaleString();
+      const difficulty = (block.difficulty / 1e12).toFixed(2) + 'T';
+      
+      panelContent.innerHTML = `
+        <div class="panel-section">
+          <div class="panel-section-title">Block Information</div>
+          <div class="panel-data-row">
+            <div class="panel-data-label">Height:</div>
+            <div class="panel-data-value">${block.height}</div>
+          </div>
+          <div class="panel-data-row">
+            <div class="panel-data-label">Timestamp:</div>
+            <div class="panel-data-value">${timestamp}</div>
+          </div>
+          <div class="panel-data-row">
+            <div class="panel-data-label">Transactions:</div>
+            <div class="panel-data-value">${block.tx_count}</div>
+          </div>
+          <div class="panel-data-row">
+            <div class="panel-data-label">Size:</div>
+            <div class="panel-data-value">${(block.size / 1024 / 1024).toFixed(2)} MB (${(block.weight / 4000000 * 100).toFixed(1)}% full)</div>
+          </div>
+          <div class="panel-data-row">
+            <div class="panel-data-label">Weight:</div>
+            <div class="panel-data-value">${block.weight.toLocaleString()} WU</div>
+          </div>
+        </div>
+        
+        <div class="panel-section">
+          <div class="panel-section-title">Block Hashes</div>
+          <div class="panel-data-row">
+            <div class="panel-data-label">Hash:</div>
+            <div class="panel-data-value" style="font-size: 0.85rem;">${block.id}</div>
+          </div>
+          <div class="panel-data-row">
+            <div class="panel-data-label">Previous Block:</div>
+            <div class="panel-data-value" style="font-size: 0.85rem;">${block.previousblockhash}</div>
+          </div>
+          <div class="panel-data-row">
+            <div class="panel-data-label">Merkle Root:</div>
+            <div class="panel-data-value" style="font-size: 0.85rem;">${block.merkle_root}</div>
+          </div>
+        </div>
+        
+        <div class="panel-section">
+          <div class="panel-section-title">Mining Details</div>
+          <div class="panel-data-row">
+            <div class="panel-data-label">Difficulty:</div>
+            <div class="panel-data-value">${difficulty}</div>
+          </div>
+          <div class="panel-data-row">
+            <div class="panel-data-label">Nonce:</div>
+            <div class="panel-data-value">${block.nonce}</div>
+          </div>
+          <div class="panel-data-row">
+            <div class="panel-data-label">Version:</div>
+            <div class="panel-data-value">0x${block.version.toString(16)}</div>
+          </div>
+          <div class="panel-data-row">
+            <div class="panel-data-label">Bits:</div>
+            <div class="panel-data-value">${block.bits}</div>
+          </div>
+        </div>
+        
+        <div class="panel-section">
+          <div class="panel-section-title">Fee Statistics</div>
+          <div class="panel-data-row">
+            <div class="panel-data-label">Block Reward:</div>
+            <div class="panel-data-value" style="color: #FFD700;">₿${reward.toFixed(8)}</div>
+          </div>
+          <div class="panel-data-row">
+            <div class="panel-data-label">Total Fees:</div>
+            <div class="panel-data-value" style="color: #FFD700;">₿${fees.toFixed(8)}</div>
+          </div>
+          <div class="panel-data-row">
+            <div class="panel-data-label">Avg Fee Rate:</div>
+            <div class="panel-data-value">${avgFeeRate} sat/vB</div>
+          </div>
+          <div class="panel-data-row">
+            <div class="panel-data-label">Median Fee:</div>
+            <div class="panel-data-value">${medianFee} sat</div>
+          </div>
+          <div class="panel-data-row">
+            <div class="panel-data-label">Fee Range:</div>
+            <div class="panel-data-value">${feeRange.join(' - ')} sat/vB</div>
+          </div>
+          <div class="panel-data-row">
+            <div class="panel-data-label">UTXO Set Change:</div>
+            <div class="panel-data-value">${utxoSetChange > 0 ? '+' : ''}${utxoSetChange}</div>
+          </div>
+        </div>
+      `;
+    }
+    
+    function renderNodeMonitorPanel() {
+      panelContent.innerHTML = `
+        <div class="panel-section">
+          <div class="panel-section-title">Network Statistics</div>
+          <div class="panel-data-row">
+            <div class="panel-data-label">Status:</div>
+            <div class="panel-data-value">Connected to mempool.space</div>
+          </div>
+          <div class="panel-data-row">
+            <div class="panel-data-label">Latest Block:</div>
+            <div class="panel-data-value">${latestBlock ? latestBlock.height : 'Loading...'}</div>
+          </div>
+          <div class="panel-data-row">
+            <div class="panel-data-label">Data Source:</div>
+            <div class="panel-data-value">${API_BASE}</div>
+          </div>
+        </div>
+        
+        <div class="panel-section">
+          <div class="panel-section-title">Coming Soon</div>
+          <div style="padding: 1rem; color: var(--matrix-dim);">
+            • Real-time mempool size<br>
+            • Network hash rate<br>
+            • Peer connections<br>
+            • Difficulty adjustment countdown<br>
+            • Block propagation time
+          </div>
+        </div>
+      `;
+    }
+    
+    // Panel close button handler
+    panelClose.addEventListener('click', closePanel);
+    
+    // Click outside panel to close
+    panelOverlay.addEventListener('click', (e) => {
+      if (e.target === panelOverlay) closePanel();
+    });
+
+    // ===== Keyboard Controls =====
     window.addEventListener('keydown', (e) => {
       if (!CONFIG) return;
       const key = e.key.toLowerCase();
+      
+      // ESC key handling
+      if (key === 'escape') {
+        if (panelOpen) {
+          closePanel();
+        } else if (menuOpen) {
+          closeMenu();
+        }
+        return;
+      }
+      
+      // Menu activation with /
+      if (e.key === '/' && !menuOpen && !panelOpen) {
+        e.preventDefault();
+        openMenu();
+        return;
+      }
+      
+      // Menu item selection (when menu is open)
+      if (menuOpen && !panelOpen) {
+        const menuItems = document.querySelectorAll('.menu-item');
+        for (const item of menuItems) {
+          if (item.dataset.key === key) {
+            openPanel(item.dataset.panel);
+            return;
+          }
+        }
+      }
+      
+      // Original toggle key for UI visibility
       if (key === CONFIG.toggleKey.toLowerCase()) {
         overlayEl.classList.toggle('hidden-ui');
         statusEl.classList.toggle('hidden-ui');
