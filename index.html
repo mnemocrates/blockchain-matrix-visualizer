@@ -155,7 +155,7 @@
     /* Node Monitor Styles */
     .node-status-header {
       display: flex; justify-content: space-between; align-items: center;
-      margin-bottom: 1rem; padding-bottom: 0.5rem;
+      margin-bottom: 0.75rem; padding-bottom: 0.5rem;
       border-bottom: 2px solid var(--matrix-dim);
     }
     .node-hostname {
@@ -178,46 +178,68 @@
     .staleness-yellow { background: #ffff00; color: #ffff00; }
     .staleness-red { background: #ff0000; color: #ff0000; }
     
-    .service-group {
+    /* Tab Bar Styles */
+    .service-tabs {
+      display: flex;
+      gap: 0.5rem;
       margin-bottom: 0.75rem;
-      border: 1px solid var(--matrix-dim);
-      border-radius: 4px;
-      background: rgba(0, 255, 127, 0.02);
+      border-bottom: 2px solid var(--matrix-dim);
+      padding-bottom: 0.5rem;
+      flex-wrap: wrap;
     }
-    .service-group-title {
-      font-size: 0.9rem;
-      font-weight: bold;
-      color: var(--matrix-green);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      padding: 0.5rem 0.75rem;
+    .service-tab {
+      padding: 0.4rem 0.75rem;
+      background: rgba(0, 255, 127, 0.05);
+      border: 1px solid var(--matrix-dim);
+      border-radius: 4px 4px 0 0;
       cursor: pointer;
+      font-size: 0.85rem;
+      color: var(--matrix-dim);
+      transition: all 0.2s ease;
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      transition: background 0.2s ease;
+      gap: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
-    .service-group-title:hover {
-      background: rgba(0, 255, 127, 0.05);
+    .service-tab:hover {
+      background: rgba(0, 255, 127, 0.1);
+      color: var(--matrix-green);
     }
-    .service-group-toggle {
-      font-size: 0.8rem;
-      transition: transform 0.2s ease;
+    .service-tab.active {
+      background: rgba(0, 255, 127, 0.15);
+      border-color: var(--matrix-green);
+      color: var(--matrix-green);
+      font-weight: bold;
+      box-shadow: 0 0 8px rgba(0, 255, 127, 0.3);
     }
-    .service-group.collapsed .service-group-toggle {
-      transform: rotate(-90deg);
+    .service-tab u {
+      text-decoration: underline;
+      text-underline-offset: 2px;
     }
-    .service-group-checks {
-      padding: 0 0.75rem 0.5rem 0.75rem;
-      max-height: 1000px;
-      overflow: hidden;
-      transition: max-height 0.3s ease, opacity 0.3s ease;
+    .tab-status-indicator {
+      width: 8px; height: 8px; border-radius: 50%;
+      display: inline-block; box-shadow: 0 0 4px currentColor;
     }
-    .service-group.collapsed .service-group-checks {
-      max-height: 0;
-      opacity: 0;
-      padding: 0;
+    .tab-status-OK { background: #00ff00; color: #00ff00; }
+    .tab-status-WARN { background: #ffff00; color: #ffff00; }
+    .tab-status-ERROR { background: #ff0000; color: #ff0000; }
+    
+    .service-tab-content {
+      display: none;
+      height: 400px;
+      overflow-y: auto;
+      padding-right: 0.5rem;
     }
+    .service-tab-content.active {
+      display: block;
+    }
+    .service-tab-content::-webkit-scrollbar { width: 6px; }
+    .service-tab-content::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.3); }
+    .service-tab-content::-webkit-scrollbar-thumb {
+      background: var(--matrix-dim); border-radius: 3px;
+    }
+    .service-tab-content::-webkit-scrollbar-thumb:hover { background: var(--matrix-green); }
     .check-item {
       padding: 0.35rem 0.5rem;
       margin: 0.25rem 0;
@@ -968,6 +990,7 @@
     // Node Monitor State
     let nodeStatusData = null;
     let nodeStatusInterval = null;
+    let currentActiveTab = null; // Track currently selected tab
     
     function calculateStaleness(timestamp) {
       if (!timestamp) return 'red';
@@ -1040,7 +1063,7 @@
     function groupChecks(checks) {
       const groups = {
         'Bitcoin Core': [],
-        'Lightning Network (LND)': [],
+        'Lightning Network': [],
         'Tor Network': [],
         'Electrs': []
       };
@@ -1049,7 +1072,7 @@
         if (name.startsWith('bitcoin_')) {
           groups['Bitcoin Core'].push({ name, check });
         } else if (name.startsWith('lnd_')) {
-          groups['Lightning Network (LND)'].push({ name, check });
+          groups['Lightning Network'].push({ name, check });
         } else if (name.startsWith('tor_')) {
           groups['Tor Network'].push({ name, check });
         } else if (name.startsWith('electrs_')) {
@@ -1058,6 +1081,32 @@
       }
       
       return groups;
+    }
+    
+    function getWorstStatus(items) {
+      // Determine the worst status in a group: ERROR > WARN > OK
+      let hasError = false;
+      let hasWarn = false;
+      
+      for (const { check } of items) {
+        if (check.status === 'ERROR') hasError = true;
+        else if (check.status === 'WARN') hasWarn = true;
+      }
+      
+      if (hasError) return 'ERROR';
+      if (hasWarn) return 'WARN';
+      return 'OK';
+    }
+    
+    function getTabKey(groupName) {
+      // Get the first letter of the group name for keyboard navigation
+      return groupName.charAt(0).toLowerCase();
+    }
+    
+    function underlineFirstLetter(text) {
+      // Wrap first letter in <u> tag
+      if (text.length === 0) return text;
+      return `<u>${text.charAt(0)}</u>${text.slice(1)}`;
     }
     
     async function fetchNodeStatus() {
@@ -1102,6 +1151,14 @@
       const staleness = calculateStaleness(nodeStatusData.timestamp);
       const groups = groupChecks(nodeStatusData.checks || {});
       
+      // Filter out empty groups
+      const nonEmptyGroups = Object.entries(groups).filter(([_, items]) => items.length > 0);
+      
+      // If no active tab is set, or if the active tab no longer exists, default to first tab
+      if (!currentActiveTab || !nonEmptyGroups.find(([name]) => name === currentActiveTab)) {
+        currentActiveTab = nonEmptyGroups.length > 0 ? nonEmptyGroups[0][0] : null;
+      }
+      
       let html = `
         <div class="node-status-header">
           <div class="node-hostname">
@@ -1113,37 +1170,67 @@
             <span>Last updated: ${formatTimestamp(nodeStatusData.timestamp)}</span>
           </div>
         </div>
+        
+        <div class="service-tabs">
       `;
       
-      for (const [groupName, items] of Object.entries(groups)) {
-        if (items.length === 0) continue;
+      // Create tabs
+      nonEmptyGroups.forEach(([groupName, items], index) => {
+        const worstStatus = getWorstStatus(items);
+        const tabKey = getTabKey(groupName);
+        const isActive = groupName === currentActiveTab ? 'active' : '';
         
         html += `
-          <div class="service-group" data-group="${groupName}">
-            <div class="service-group-title">
-              ${groupName}
-              <span class="service-group-toggle">▼</span>
-            </div>
-            <div class="service-group-checks">
-              ${items.map(({ name, check }) => renderCheckItem(name, check)).join('')}
-            </div>
+          <div class="service-tab ${isActive}" data-tab="${groupName}" data-key="${tabKey}">
+            <span class="tab-status-indicator tab-status-${worstStatus}"></span>
+            <span>${underlineFirstLetter(groupName)}</span>
           </div>
         `;
-      }
+      });
+      
+      html += `</div>`;
+      
+      // Create tab content
+      nonEmptyGroups.forEach(([groupName, items], index) => {
+        const isActive = groupName === currentActiveTab ? 'active' : '';
+        
+        html += `
+          <div class="service-tab-content ${isActive}" data-content="${groupName}">
+            ${items.map(({ name, check }) => renderCheckItem(name, check)).join('')}
+          </div>
+        `;
+      });
       
       panelContent.innerHTML = html;
       
-      // Add event listeners for expand/collapse
+      // Add event listeners for tab switching and check expansion
       setupNodeMonitorInteractions();
     }
     
     function setupNodeMonitorInteractions() {
-      // Service group toggle
-      const groupTitles = panelContent.querySelectorAll('.service-group-title');
-      groupTitles.forEach(title => {
-        title.addEventListener('click', (e) => {
-          const group = e.target.closest('.service-group');
-          group.classList.toggle('collapsed');
+      const tabs = panelContent.querySelectorAll('.service-tab');
+      const contents = panelContent.querySelectorAll('.service-tab-content');
+      
+      // Tab click handlers
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          const targetGroup = tab.dataset.tab;
+          
+          // Store the selected tab
+          currentActiveTab = targetGroup;
+          
+          // Update active tab
+          tabs.forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          
+          // Update active content
+          contents.forEach(c => {
+            if (c.dataset.content === targetGroup) {
+              c.classList.add('active');
+            } else {
+              c.classList.remove('active');
+            }
+          });
         });
       });
       
@@ -1171,6 +1258,8 @@
         clearInterval(nodeStatusInterval);
         nodeStatusInterval = null;
       }
+      // Reset active tab when panel closes
+      currentActiveTab = null;
     }
     
     // Panel close button handler
@@ -1211,6 +1300,17 @@
           openMenu();
         }
         return;
+      }
+      
+      // Node Monitor tab navigation (when node monitor panel is open)
+      if (panelOpen && currentPanel === 'nodeMonitor') {
+        const tabs = panelContent.querySelectorAll('.service-tab');
+        for (const tab of tabs) {
+          if (tab.dataset.key === key) {
+            tab.click(); // Trigger tab switch
+            return;
+          }
+        }
       }
       
       // Menu item selection (when menu is open)

@@ -134,6 +134,7 @@ All visualization settings are stored in `config.json`, making it easy to custom
 - **/** - Navigate back: Opens menu → Closes panel (returns to menu) → Closes menu
 - **b** - (when menu open) Open Block Details panel
 - **n** - (when menu open) Open Node Monitor panel
+- **b/l/t/e** - (when Node Monitor open) Switch between service tabs (Bitcoin/Lightning/Tor/Electrs)
 - **s** - Toggle overlay panel and status indicator visibility
 - **ESC** - Alternative close key (same behavior as /)
 
@@ -160,9 +161,11 @@ The Node Monitor panel provides real-time status monitoring for Tor-only Bitcoin
 
 ### Status Display Features
 
-- **Compact View**: All checks visible at-a-glance without scrolling
-- **Service Grouping**: Checks organized by service (Bitcoin Core, LND, Tor, Electrs)
-  - Click service group title to expand/collapse entire section
+- **Fixed-Height Panel**: Panel size remains constant when switching between tabs
+- **Tabbed Interface**: One tab per service group (Bitcoin Core, Lightning Network, Tor, Electrs)
+  - Click tab or press underlined letter key to switch
+  - Color-coded status indicator on each tab shows worst status in that group
+  - Active tab highlighted with enhanced border and glow
 - **Visual Status Indicators**: Color-coded badges (OK=green, WARN=yellow, ERROR=red)
 - **Expandable Details**: Click any check to view detailed metrics
 - **Staleness Indicator**: Color-coded timestamp showing data freshness
@@ -170,6 +173,7 @@ The Node Monitor panel provides real-time status monitoring for Tor-only Bitcoin
   - 🟡 Yellow: Updated 8-15 minutes ago
   - 🔴 Red: Updated > 15 minutes ago
 - **Glitch Effect**: Visual transition effect when status updates
+- **Dynamic Navigation**: Keyboard shortcuts automatically adapt to available service groups
 
 ### Status File Format
 
