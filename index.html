@@ -201,6 +201,8 @@
     let bgLastPos = [];
     let bgTrailLength = [];
     let bgCharHistory = [];
+    let bgColorHistory = []; // Track gold colors in background
+    let bgIndex = []; // Track position in pool
     
     // ===== TRANSITION EFFECTS =====
     let transitionActive = false;
@@ -289,6 +291,8 @@
         const maxTrailBg = Math.floor(H / fontSize * CONFIG.trailLengthMaxPercent * 0.8); // Slightly shorter
         bgTrailLength = Array(columns).fill(0).map(() => Math.floor(CONFIG.trailLengthMin + Math.random() * (maxTrailBg - CONFIG.trailLengthMin)));
         bgCharHistory = Array(columns).fill(null).map(() => []);
+        bgColorHistory = Array(columns).fill(null).map(() => []);
+        bgIndex = Array(columns).fill(0).map(() => Math.floor(Math.random() * 10));
       }
     }
 
@@ -319,17 +323,27 @@
 
       // ===== DRAW BACKGROUND LAYER (for depth) =====
       if (CONFIG.enableBackgroundLayer) {
+        const headerCols = Math.max(1, Math.floor(columns * CONFIG.headerColumnPercentage));
         for (let i = 0; i < bgDrops.length; i++) {
+          // Skip background layer in header columns for cleaner distinction
+          if (i < headerCols) continue;
+          
           const currentPos = Math.floor(bgDrops[i]);
           
           // Get new character when position changes
           if (currentPos !== bgLastPos[i]) {
             const pool = columnPools[i] || '0123456789abcdef';
-            bgChars[i] = pool[Math.floor(Math.random() * pool.length)];
+            const poolColors = columnPoolColors[i] || [];
+            const idx = bgIndex[i] % pool.length;
+            bgChars[i] = pool[idx];
+            const isGold = poolColors[idx] || false;
+            bgIndex[i] = (bgIndex[i] + 1) % pool.length;
             bgLastPos[i] = currentPos;
             bgCharHistory[i].unshift(bgChars[i]);
+            bgColorHistory[i].unshift(isGold);
             if (bgCharHistory[i].length > Math.floor(H / fontSize)) {
               bgCharHistory[i].length = Math.floor(H / fontSize);
+              bgColorHistory[i].length = Math.floor(H / fontSize);
             }
           }
           
@@ -338,14 +352,23 @@
           const x = i * fontSize + fontSize * 0.5;
           const y = currentPos * fontSize;
           
-          // Parse primary color RGB
-          const colorHex = CONFIG.primaryColor;
-          const r = parseInt(colorHex.slice(1, 3), 16);
-          const g = parseInt(colorHex.slice(3, 5), 16);
-          const b = parseInt(colorHex.slice(5, 7), 16);
+          // Determine if this character should be gold
+          const isGoldChar = bgColorHistory[i][0] || false;
           
-          // Draw head at reduced opacity
-          ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${CONFIG.backgroundLayerOpacity})`;
+          // Draw head at reduced opacity with appropriate color
+          if (isGoldChar) {
+            const goldHex = CONFIG.goldColor;
+            const r = parseInt(goldHex.slice(1, 3), 16);
+            const g = parseInt(goldHex.slice(3, 5), 16);
+            const b = parseInt(goldHex.slice(5, 7), 16);
+            ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${CONFIG.backgroundLayerOpacity})`;
+          } else {
+            const colorHex = CONFIG.primaryColor;
+            const r = parseInt(colorHex.slice(1, 3), 16);
+            const g = parseInt(colorHex.slice(3, 5), 16);
+            const b = parseInt(colorHex.slice(5, 7), 16);
+            ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${CONFIG.backgroundLayerOpacity})`;
+          }
           ctx.fillText(ch, x, y);
           
           // Draw trail
@@ -359,7 +382,21 @@
             
             if (opacity > 0.02) {
               const trailChar = bgCharHistory[i][j] || ch;
-              ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${opacity})`;
+              const trailIsGold = bgColorHistory[i][j] || false;
+              
+              if (trailIsGold) {
+                const goldHex = CONFIG.goldColor;
+                const r = parseInt(goldHex.slice(1, 3), 16);
+                const g = parseInt(goldHex.slice(3, 5), 16);
+                const b = parseInt(goldHex.slice(5, 7), 16);
+                ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${opacity})`;
+              } else {
+                const colorHex = CONFIG.primaryColor;
+                const r = parseInt(colorHex.slice(1, 3), 16);
+                const g = parseInt(colorHex.slice(3, 5), 16);
+                const b = parseInt(colorHex.slice(5, 7), 16);
+                ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${opacity})`;
+              }
               ctx.fillText(trailChar, x, trailY);
             }
           }
