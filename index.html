@@ -1062,10 +1062,10 @@
     
     function groupChecks(checks) {
       const groups = {
-        'Bitcoin Core': [],
-        'Lightning Network': [],
         'Tor Network': [],
-        'Electrs': []
+        'Bitcoin Core': [],
+        'Electrs': [],
+        'Lightning Network': []
       };
       
       for (const [name, check] of Object.entries(checks)) {
