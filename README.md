@@ -6,13 +6,15 @@ A real-time Matrix-style visualization of Bitcoin blockchain data, featuring fal
 
 - **Matrix Rain Effect**: Character streams with variable trail lengths (5-80% screen height) and exponential fade
 - **Live Bitcoin Data**: Real-time block data from [mempool.space](https://mempool.space) API
+- **Node Monitor Panel**: Real-time status monitoring for Tor-only Bitcoin/Electrs/LND nodes
 - **Dual Data Display**:
   - Left 25%: Block header information (hash, merkle root, version, bits, nonce, difficulty, timestamp, height, coinbase)
   - Right 75%: UTXO transaction data (addresses, amounts, transaction hashes)
 - **Bitcoin Amount Highlighting**: Bitcoin symbols (₿) and amounts rendered in gold (#FFD700)
 - **Stable Character Rendering**: Character history buffers prevent rapid cycling for improved readability
 - **Color Gradient**: Green color gradient across UTXO columns
-- **Keyboard Controls**: Press 's' to toggle UI visibility
+- **Interactive Panels**: Access Block Details and Node Monitor via menu (press `/`)
+- **Keyboard Controls**: Press 's' to toggle UI visibility, '/' for menu, ESC to close panels
 - **Responsive Design**: Adapts to window resizing
 
 ## Data Source
@@ -129,12 +131,71 @@ All visualization settings are stored in `config.json`, making it easy to custom
 
 ### Keyboard Shortcuts
 
+- **/** - Open menu to access Block Details and Node Monitor panels
+- **b** - (when menu open) Open Block Details panel
+- **n** - (when menu open) Open Node Monitor panel
 - **s** - Toggle overlay panel and status indicator visibility
+- **ESC** - Close open panel or menu
 
 ### Interactive Elements
 
 - **Click overlay panel** - Expand/collapse block details
 - **Hover overlay** - Enhanced glow effect
+- **Panel navigation** - Use keyboard shortcuts or click menu items
+
+## Node Monitor
+
+The Node Monitor panel provides real-time status monitoring for Tor-only Bitcoin nodes running Bitcoin Core, LND (Lightning Network Daemon), Electrs, and Tor.
+
+### Setup
+
+1. Create a `status` directory in the same location as `index.html`:
+   ```bash
+   mkdir status
+   ```
+
+2. Configure your node monitoring script to output status to `./status/status.json`
+
+3. The panel will automatically refresh every 30 seconds while open
+
+### Status Display Features
+
+- **Service Grouping**: Checks organized by service (Bitcoin Core, LND, Tor, Electrs)
+- **Visual Status Indicators**: Color-coded badges (OK=green, WARN=yellow, ERROR=red)
+- **Staleness Indicator**: Color-coded timestamp showing data freshness
+  - 🟢 Green: Updated < 8 minutes ago
+  - 🟡 Yellow: Updated 8-15 minutes ago
+  - 🔴 Red: Updated > 15 minutes ago
+- **Detailed Metrics**: Expandable metrics for each check
+- **Glitch Effect**: Visual transition effect when status updates
+
+### Status File Format
+
+The `status.json` file should follow this structure:
+
+```json
+{
+  "node": "identifier",
+  "hostname": "node-hostname",
+  "timestamp": "2026-01-16T17:35:29Z",
+  "checks": {
+    "check_name": {
+      "status": "OK|WARN|ERROR",
+      "message": "Human-readable status message",
+      "updated": "2026-01-16T17:35:01Z",
+      "metrics": {
+        "metric_key": "value"
+      }
+    }
+  }
+}
+```
+
+Supported check prefixes:
+- `bitcoin_*` - Bitcoin Core checks
+- `lnd_*` - Lightning Network Daemon checks
+- `tor_*` - Tor network checks
+- `electrs_*` - Electrs server checks
 
 ## Web Hosting
 

@@ -151,6 +151,135 @@
     .panel-data-value {
       color: var(--matrix-green); word-break: break-all; flex: 1;
     }
+    
+    /* Node Monitor Styles */
+    .node-status-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 1.5rem; padding-bottom: 0.75rem;
+      border-bottom: 2px solid var(--matrix-dim);
+    }
+    .node-hostname {
+      font-size: 1.1rem; font-weight: bold;
+      color: var(--matrix-green); text-shadow: 0 0 8px rgba(0, 255, 127, 0.5);
+    }
+    .node-timestamp {
+      font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem;
+    }
+    .staleness-indicator {
+      width: 12px; height: 12px; border-radius: 50%;
+      display: inline-block; box-shadow: 0 0 8px currentColor;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    .staleness-green { background: #00ff00; color: #00ff00; }
+    .staleness-yellow { background: #ffff00; color: #ffff00; }
+    .staleness-red { background: #ff0000; color: #ff0000; }
+    
+    .service-group {
+      margin-bottom: 1.5rem;
+      border: 1px solid var(--matrix-dim);
+      border-radius: 4px;
+      padding: 1rem;
+      background: rgba(0, 255, 127, 0.02);
+    }
+    .service-group-title {
+      font-size: 1rem;
+      font-weight: bold;
+      color: var(--matrix-green);
+      margin-bottom: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      border-bottom: 1px solid var(--matrix-dim);
+      padding-bottom: 0.3rem;
+    }
+    .check-item {
+      padding: 0.5rem;
+      margin: 0.5rem 0;
+      border-left: 3px solid var(--matrix-dim);
+      background: rgba(0, 0, 0, 0.3);
+      transition: all 0.3s ease;
+    }
+    .check-item:hover {
+      background: rgba(0, 255, 127, 0.05);
+      border-left-color: var(--matrix-green);
+    }
+    .check-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.3rem;
+    }
+    .status-badge {
+      padding: 0.15rem 0.5rem;
+      border-radius: 3px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      box-shadow: 0 0 8px currentColor;
+    }
+    .status-OK {
+      background: rgba(0, 255, 0, 0.2);
+      color: #00ff00;
+      border: 1px solid #00ff00;
+    }
+    .status-WARN {
+      background: rgba(255, 255, 0, 0.2);
+      color: #ffff00;
+      border: 1px solid #ffff00;
+    }
+    .status-ERROR {
+      background: rgba(255, 0, 0, 0.2);
+      color: #ff0000;
+      border: 1px solid #ff0000;
+    }
+    .check-name {
+      flex: 1;
+      color: var(--matrix-green);
+      font-weight: bold;
+    }
+    .check-message {
+      color: var(--matrix-dim);
+      font-size: 0.85rem;
+      margin-left: 0.75rem;
+    }
+    .check-metrics {
+      margin-left: 0.75rem;
+      margin-top: 0.5rem;
+      padding: 0.5rem;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 3px;
+      font-size: 0.8rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 0.5rem;
+    }
+    .metric-item {
+      color: var(--matrix-dim);
+    }
+    .metric-label {
+      color: var(--matrix-deep);
+    }
+    .metric-value {
+      color: var(--matrix-green);
+      font-weight: bold;
+    }
+    
+    .glitch-effect {
+      animation: glitch 0.3s ease;
+    }
+    @keyframes glitch {
+      0%, 100% { transform: translate(0); opacity: 1; }
+      10% { transform: translate(-2px, 2px); opacity: 0.8; }
+      20% { transform: translate(2px, -2px); opacity: 0.9; }
+      30% { transform: translate(-2px, -2px); opacity: 0.7; }
+      40% { transform: translate(2px, 2px); opacity: 0.9; }
+      50% { transform: translate(-1px, 1px); opacity: 0.85; }
+      60% { transform: translate(1px, -1px); opacity: 0.95; }
+    }
   </style>
 </head>
 <body>
@@ -667,7 +796,7 @@
           break;
         case 'nodeMonitor':
           panelTitle.textContent = 'Node Monitor';
-          renderNodeMonitorPanel();
+          startNodeStatusRefresh();
           break;
       }
       
@@ -678,6 +807,9 @@
       panelOverlay.classList.add('hidden');
       panelOpen = false;
       currentPanel = null;
+      
+      // Stop node status refresh when panel closes
+      stopNodeStatusRefresh();
     }
     
     // ===== Panel Renderers =====
@@ -790,35 +922,180 @@
       `;
     }
     
-    function renderNodeMonitorPanel() {
-      panelContent.innerHTML = `
-        <div class="panel-section">
-          <div class="panel-section-title">Network Statistics</div>
-          <div class="panel-data-row">
-            <div class="panel-data-label">Status:</div>
-            <div class="panel-data-value">Connected to mempool.space</div>
+    // Node Monitor State
+    let nodeStatusData = null;
+    let nodeStatusInterval = null;
+    
+    function calculateStaleness(timestamp) {
+      if (!timestamp) return 'red';
+      const now = new Date();
+      const updated = new Date(timestamp);
+      const minutesAgo = (now - updated) / 1000 / 60;
+      
+      if (minutesAgo < 8) return 'green';
+      if (minutesAgo < 15) return 'yellow';
+      return 'red';
+    }
+    
+    function formatTimestamp(timestamp) {
+      if (!timestamp) return 'Unknown';
+      const date = new Date(timestamp);
+      const now = new Date();
+      const secondsAgo = Math.floor((now - date) / 1000);
+      
+      if (secondsAgo < 60) return `${secondsAgo}s ago`;
+      if (secondsAgo < 3600) return `${Math.floor(secondsAgo / 60)}m ago`;
+      if (secondsAgo < 86400) return `${Math.floor(secondsAgo / 3600)}h ago`;
+      return date.toLocaleString();
+    }
+    
+    function renderMetrics(metrics) {
+      if (!metrics || typeof metrics !== 'object') return '';
+      
+      return Object.entries(metrics)
+        .map(([key, value]) => {
+          let displayValue = value;
+          if (typeof value === 'boolean') {
+            displayValue = value ? 'Yes' : 'No';
+          } else if (typeof value === 'object') {
+            displayValue = JSON.stringify(value);
+          }
+          
+          return `
+            <div class="metric-item">
+              <span class="metric-label">${key.replace(/_/g, ' ')}:</span>
+              <span class="metric-value">${displayValue}</span>
+            </div>
+          `;
+        })
+        .join('');
+    }
+    
+    function renderCheckItem(checkName, check) {
+      const status = check.status || 'UNKNOWN';
+      const message = check.message || 'No message';
+      const metrics = check.metrics || {};
+      
+      return `
+        <div class="check-item">
+          <div class="check-header">
+            <span class="status-badge status-${status}">${status}</span>
+            <span class="check-name">${checkName.replace(/_/g, ' ').toUpperCase()}</span>
           </div>
-          <div class="panel-data-row">
-            <div class="panel-data-label">Latest Block:</div>
-            <div class="panel-data-value">${latestBlock ? latestBlock.height : 'Loading...'}</div>
-          </div>
-          <div class="panel-data-row">
-            <div class="panel-data-label">Data Source:</div>
-            <div class="panel-data-value">${API_BASE}</div>
-          </div>
+          <div class="check-message">${message}</div>
+          ${Object.keys(metrics).length > 0 ? `
+            <div class="check-metrics">
+              ${renderMetrics(metrics)}
+            </div>
+          ` : ''}
         </div>
+      `;
+    }
+    
+    function groupChecks(checks) {
+      const groups = {
+        'Bitcoin Core': [],
+        'Lightning Network (LND)': [],
+        'Tor Network': [],
+        'Electrs': []
+      };
+      
+      for (const [name, check] of Object.entries(checks)) {
+        if (name.startsWith('bitcoin_')) {
+          groups['Bitcoin Core'].push({ name, check });
+        } else if (name.startsWith('lnd_')) {
+          groups['Lightning Network (LND)'].push({ name, check });
+        } else if (name.startsWith('tor_')) {
+          groups['Tor Network'].push({ name, check });
+        } else if (name.startsWith('electrs_')) {
+          groups['Electrs'].push({ name, check });
+        }
+      }
+      
+      return groups;
+    }
+    
+    async function fetchNodeStatus() {
+      try {
+        const response = await fetch('./status/status.json', { cache: 'no-store' });
+        if (!response.ok) throw new Error('Failed to fetch status');
+        const data = await response.json();
         
-        <div class="panel-section">
-          <div class="panel-section-title">Coming Soon</div>
-          <div style="padding: 1rem; color: var(--matrix-dim);">
-            • Real-time mempool size<br>
-            • Network hash rate<br>
-            • Peer connections<br>
-            • Difficulty adjustment countdown<br>
-            • Block propagation time
+        // Apply glitch effect if data changed
+        if (nodeStatusData && JSON.stringify(nodeStatusData) !== JSON.stringify(data)) {
+          const content = panelContent;
+          content.classList.add('glitch-effect');
+          setTimeout(() => content.classList.remove('glitch-effect'), 300);
+        }
+        
+        nodeStatusData = data;
+        renderNodeMonitorPanel();
+      } catch (error) {
+        console.error('Error fetching node status:', error);
+        panelContent.innerHTML = `
+          <div style="padding: 2rem; text-align: center; color: var(--matrix-dim);">
+            <p style="font-size: 1.2rem; margin-bottom: 1rem;">⚠ Unable to load node status</p>
+            <p style="font-size: 0.9rem;">${error.message}</p>
+            <p style="font-size: 0.8rem; margin-top: 1rem;">
+              Expected file: ./status/status.json
+            </p>
+          </div>
+        `;
+      }
+    }
+    
+    function renderNodeMonitorPanel() {
+      if (!nodeStatusData) {
+        panelContent.innerHTML = `
+          <div style="padding: 2rem; text-align: center; color: var(--matrix-dim);">
+            Loading node status...
+          </div>
+        `;
+        return;
+      }
+      
+      const staleness = calculateStaleness(nodeStatusData.timestamp);
+      const groups = groupChecks(nodeStatusData.checks || {});
+      
+      let html = `
+        <div class="node-status-header">
+          <div class="node-hostname">
+            ${nodeStatusData.hostname || 'Unknown Node'}
+            ${nodeStatusData.node ? `<span style="color: var(--matrix-dim); font-size: 0.85rem; margin-left: 0.5rem;">(${nodeStatusData.node})</span>` : ''}
+          </div>
+          <div class="node-timestamp">
+            <span class="staleness-indicator staleness-${staleness}"></span>
+            <span>Last updated: ${formatTimestamp(nodeStatusData.timestamp)}</span>
           </div>
         </div>
       `;
+      
+      for (const [groupName, items] of Object.entries(groups)) {
+        if (items.length === 0) continue;
+        
+        html += `
+          <div class="service-group">
+            <div class="service-group-title">${groupName}</div>
+            ${items.map(({ name, check }) => renderCheckItem(name, check)).join('')}
+          </div>
+        `;
+      }
+      
+      panelContent.innerHTML = html;
+    }
+    
+    // Start periodic refresh when node monitor panel is opened
+    function startNodeStatusRefresh() {
+      if (nodeStatusInterval) return;
+      fetchNodeStatus(); // Initial fetch
+      nodeStatusInterval = setInterval(fetchNodeStatus, 30000); // Refresh every 30 seconds
+    }
+    
+    function stopNodeStatusRefresh() {
+      if (nodeStatusInterval) {
+        clearInterval(nodeStatusInterval);
+        nodeStatusInterval = null;
+      }
     }
     
     // Panel close button handler

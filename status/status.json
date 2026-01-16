@@ -1,0 +1,213 @@
+{
+  "node": "0kb",
+  "hostname": "btc-node-01",
+  "timestamp": "2026-01-16T17:35:29Z",
+  "checks": {
+    "bitcoin_rpc": {
+      "status": "OK",
+      "message": "Bitcoin Core RPC reachable (7ms, 1 attempt(s))",
+      "updated": "2026-01-16T17:35:01Z",
+      "metrics": {
+        "responding": true,
+        "latency_ms": 7,
+        "attempts": 1
+      }
+    },
+    "bitcoin_sync_status": {
+      "status": "OK",
+      "message": "Bitcoin Core fully synced (932535 blocks, 100% verified, chain: main)",
+      "updated": "2026-01-16T17:35:01Z",
+      "metrics": {
+        "initialblockdownload": false,
+        "verificationprogress": 1,
+        "verification_pct": 100,
+        "blocks": 932535,
+        "headers": 932535,
+        "chain": "main"
+      }
+    },
+    "bitcoin_blockheight": {
+      "status": "OK",
+      "message": "Bitcoin block height in sync with public (drift=0)",
+      "updated": "2026-01-16T17:35:03Z",
+      "metrics": {
+        "local_height": 932535,
+        "public_height": 932535,
+        "drift": 0,
+        "source": "https://blockstream.info/api/blocks/tip/height"
+      }
+    },
+    "bitcoin_block_age": {
+      "status": "WARN",
+      "message": "Last Bitcoin block received 33m ago (threshold: 25m)",
+      "updated": "2026-01-16T17:35:03Z",
+      "metrics": {
+        "block_age_seconds": 1983,
+        "last_block_time": 1768582920,
+        "blocks": 932535
+      }
+    },
+    "bitcoin_mempool_usage": {
+      "status": "OK",
+      "message": "Bitcoin mempool usage healthy: 53% (153.77MB / 286.10MB)",
+      "updated": "2026-01-16T17:35:03Z",
+      "metrics": {
+        "usage": 161247920,
+        "maxmempool": 300000000,
+        "usage_pct": 53,
+        "usage_mb": 153.77
+      }
+    },
+    "bitcoin_mempool_size": {
+      "status": "OK",
+      "message": "Bitcoin mempool size healthy: 16519 transactions",
+      "updated": "2026-01-16T17:35:03Z",
+      "metrics": {
+        "size": 16519,
+        "unbroadcastcount": 0
+      }
+    },
+    "bitcoin_mempool_minfee": {
+      "status": "OK",
+      "message": "Bitcoin mempool minimum fee normal: 1.00x (mempoolminfee=0.00000100)",
+      "updated": "2026-01-16T17:35:03Z",
+      "metrics": {
+        "mempoolminfee": 0.00000100,
+        "minrelaytxfee": 0.00000100,
+        "minfee_multiplier": 1.00
+      }
+    },
+    "bitcoin_mempool_unbroadcast": {
+      "status": "OK",
+      "message": "Bitcoin mempool unbroadcast transactions normal: 0",
+      "updated": "2026-01-16T17:35:03Z",
+      "metrics": {
+        "unbroadcastcount": 0,
+        "size": 16519
+      }
+    },
+    "lnd_wallet": {
+      "status": "OK",
+      "message": "LND wallet unlocked and reachable (1 attempt(s))",
+      "updated": "2026-01-16T17:35:03Z",
+      "metrics": {
+        "responding": true,
+        "attempts": 1
+      }
+    },
+    "lnd_peers": {
+      "status": "WARN",
+      "message": "LND peers low: 1 (threshold: 2, inbound: 0, outbound: 1)",
+      "updated": "2026-01-16T17:35:03Z",
+      "metrics": {
+        "peers": 1,
+        "inbound": 0,
+        "outbound": 1
+      }
+    },
+    "lnd_channels": {
+      "status": "OK",
+      "message": "LND channels healthy: 1 active, 0 inactive, 0 pending",
+      "updated": "2026-01-16T17:35:03Z",
+      "metrics": {
+        "active": 1,
+        "inactive": 0,
+        "pending": 0,
+        "total": 1
+      }
+    },
+    "lnd_blockheight": {
+      "status": "OK",
+      "message": "LND block height in sync with Core (drift=0)",
+      "updated": "2026-01-16T17:35:03Z",
+      "metrics": {
+        "core_height": 932535,
+        "lnd_height": 932535,
+        "drift": 0
+      }
+    },
+    "lnd_chain_sync": {
+      "status": "OK",
+      "message": "LND is synced to chain (height: 932535)",
+      "updated": "2026-01-16T17:35:03Z",
+      "metrics": {
+        "synced": true,
+        "block_height": 932535
+      }
+    },
+    "lnd_graph_sync": {
+      "status": "OK",
+      "message": "LND is synced to graph (17290 nodes, 50938 channels)",
+      "updated": "2026-01-16T17:35:25Z",
+      "metrics": {
+        "synced": true,
+        "num_nodes": 17290,
+        "num_channels": 50938
+      }
+    },
+    "tor_socks": {
+      "status": "OK",
+      "message": "Tor SOCKS reachable and circuits working (1 attempt(s))",
+      "updated": "2026-01-16T17:35:26Z",
+      "metrics": {
+        "attempts": 1,
+        "success": true
+      }
+    },
+    "tor_circuit": {
+      "status": "OK",
+      "message": "Tor circuits appear healthy (1 attempt(s))",
+      "updated": "2026-01-16T17:35:27Z",
+      "metrics": {
+        "attempts": 1,
+        "success": true
+      }
+    },
+    "tor_onion": {
+      "status": "OK",
+      "message": "All LND onion URIs reachable via Tor",
+      "updated": "2026-01-16T17:35:28Z",
+      "metrics": {
+        "uris": [
+          {
+            "uri": "cehiqspnelv3wyodso22b5adupp3pxprdc55y4dsqajmw6abt6kbfmyd.onion:9735",
+            "status": "OK",
+            "attempts": 1
+          }
+        ],
+        "fail_count": 0,
+        "total_count": 1
+      }
+    },
+    "electrs_connectivity": {
+      "status": "OK",
+      "message": "Electrs responding (9ms, 1 attempt(s), electrs/0.11.0)",
+      "updated": "2026-01-16T17:35:28Z",
+      "metrics": {
+        "responding": true,
+        "attempts": 1,
+        "response_time_ms": 9,
+        "server_version": "electrs/0.11.0"
+      }
+    },
+    "electrs_sync": {
+      "status": "OK",
+      "message": "Electrs in sync with Core (drift=0)",
+      "updated": "2026-01-16T17:35:28Z",
+      "metrics": {
+        "electrs_height": 932536,
+        "core_height": 932536,
+        "drift": 0
+      }
+    },
+    "electrs_performance": {
+      "status": "OK",
+      "message": "Electrs performance healthy: 9ms",
+      "updated": "2026-01-16T17:35:28Z",
+      "metrics": {
+        "response_time_ms": 9,
+        "attempts": 1
+      }
+    }
+  }
+}
