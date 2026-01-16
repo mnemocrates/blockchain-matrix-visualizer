@@ -160,13 +160,15 @@ The Node Monitor panel provides real-time status monitoring for Tor-only Bitcoin
 
 ### Status Display Features
 
+- **Compact View**: All checks visible at-a-glance without scrolling
 - **Service Grouping**: Checks organized by service (Bitcoin Core, LND, Tor, Electrs)
+  - Click service group title to expand/collapse entire section
 - **Visual Status Indicators**: Color-coded badges (OK=green, WARN=yellow, ERROR=red)
+- **Expandable Details**: Click any check to view detailed metrics
 - **Staleness Indicator**: Color-coded timestamp showing data freshness
   - 🟢 Green: Updated < 8 minutes ago
   - 🟡 Yellow: Updated 8-15 minutes ago
   - 🔴 Red: Updated > 15 minutes ago
-- **Detailed Metrics**: Expandable metrics for each check
 - **Glitch Effect**: Visual transition effect when status updates
 
 ### Status File Format
