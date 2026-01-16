@@ -134,6 +134,7 @@ All visualization settings are stored in `config.json`, making it easy to custom
 - **/** - Navigate back: Opens menu → Closes panel (returns to menu) → Closes menu
 - **b** - (when menu open) Open Block Details panel
 - **n** - (when menu open) Open Node Monitor panel
+- **a** - (when menu open) Open About panel
 - **b/l/t/e** - (when Node Monitor open) Switch between service tabs (Bitcoin/Lightning/Tor/Electrs)
 - **s** - Toggle overlay panel and status indicator visibility
 - **ESC** - Alternative close key (same behavior as /)

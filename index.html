@@ -369,6 +369,7 @@
   <div id="menu-bar" class="hidden">
     <span class="menu-item" data-key="b" data-panel="blockDetails"><u>B</u>lock Details</span>
     <span class="menu-item" data-key="n" data-panel="nodeMonitor"><u>N</u>ode Monitor</span>
+    <span class="menu-item" data-key="a" data-panel="about" style="margin-left: auto;"><u>A</u>bout</span>
   </div>
 
   <!-- Panel Overlay -->
@@ -863,6 +864,10 @@
           panelTitle.textContent = 'Node Monitor';
           startNodeStatusRefresh();
           break;
+        case 'about':
+          panelTitle.textContent = 'About';
+          renderAboutPanel();
+          break;
       }
       
       closeMenu(); // Close menu when panel opens
@@ -983,6 +988,20 @@
             <div class="panel-data-label">UTXO Set Change:</div>
             <div class="panel-data-value">${utxoSetChange > 0 ? '+' : ''}${utxoSetChange}</div>
           </div>
+        </div>
+      `;
+    }
+    
+    function renderAboutPanel() {
+      panelContent.innerHTML = `
+        <div class="panel-section">
+          <div class="panel-section-title">What is This?</div>
+          <p style="line-height: 1.8; color: var(--matrix-dim);">
+            This is a <strong style="color: var(--matrix-green);">real-time Bitcoin blockchain visualizer</strong> 
+            that combines the iconic Matrix "digital rain" aesthetic with live blockchain data. Watch as 
+            transactions and block data cascade down your screen in an ever-flowing stream of cryptographic 
+            information.
+          </p>
         </div>
       `;
     }
