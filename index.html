@@ -964,6 +964,18 @@
     function openMenu() {
       menuBar.classList.remove('hidden');
       menuOpen = true;
+      
+      // Add click/touch handlers to menu items when menu opens
+      const menuItems = document.querySelectorAll('.menu-item');
+      menuItems.forEach(item => {
+        item.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const panelType = item.dataset.panel;
+          if (panelType) {
+            openPanel(panelType);
+          }
+        });
+      });
     }
     
     function closeMenu() {
