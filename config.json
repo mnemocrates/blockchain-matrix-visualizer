@@ -14,7 +14,10 @@
     "backgroundFadeAlpha": 0.15,
     "resetProbability": 0.975,
     "headCycleFrames": 8,
-    "headCycleChars": "abcdefghijklmnopqrstuvwxyz0123456789"
+    "headCycleChars": "abcdefghijklmnopqrstuvwxyz0123456789",
+    "enableBackgroundLayer": true,
+    "backgroundLayerOpacity": 0.35,
+    "backgroundLayerSpeed": 0.4
   },
   "colors": {
     "primaryColor": "#00ff7f",
