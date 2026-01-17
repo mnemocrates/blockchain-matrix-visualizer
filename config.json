@@ -27,6 +27,7 @@
     "gradientEndRGB": [0, 136, 68]
   },
   "api": {
+    "useLocalNode": true,
     "apiBase": "https://mempool.space/api",
     "blockRefreshInterval": 30000,
     "ageUpdateInterval": 1000,

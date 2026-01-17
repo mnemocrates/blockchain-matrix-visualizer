@@ -1,0 +1,17 @@
+{
+  "_comment": "Bitcoin Core RPC Configuration - KEEP THIS FILE PRIVATE!",
+  "_comment2": "This file contains sensitive credentials and should never be committed to version control",
+  
+  "rpc_url": "http://your-onion-address.onion:8332",
+  "rpc_user": "your_rpc_username",
+  "rpc_password": "your_rpc_password",
+  
+  "use_tor": true,
+  "tor_proxy": "socks5h://127.0.0.1:9050",
+  
+  "poll_interval": 30,
+  "output_dir": "./data",
+  
+  "transaction_chunk_size": 10,
+  "max_transactions_per_block": 100
+}

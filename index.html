@@ -432,7 +432,7 @@
     <div id="legend">⬅︎ Block Header (left ~25%) • UTXO Data: addresses, amounts ₿, hashes (right ~75%)</div>
   </div>
 
-  <div id="status" class="hidden-ui">Matrix connected to mempool.space…</div>
+  <div id="status" class="hidden-ui">Initializing Matrix…</div>
 
   <!-- Menu Bar -->
   <div id="menu-bar" class="hidden">
@@ -1634,6 +1634,111 @@
       return res.json();
     }
 
+    // ===== Local Data Source Functions =====
+    let currentChunkIndex = 0;
+    let totalChunks = 0;
+    
+    async function fetchLocalBlockData() {
+      const res = await fetch('./data/current_block.json', { cache: 'no-store' });
+      if (!res.ok) throw new Error(`Local block fetch failed: ${res.status}`);
+      return res.json();
+    }
+    
+    function processLocalBlockData(blockData, chunkIndex = null) {
+      const block = blockData.block;
+      
+      // Convert to format expected by renderOverlay
+      const formattedBlock = {
+        id: block.hash,
+        hash: block.hash,
+        height: block.height,
+        version: block.version,
+        merkle_root: block.merkle_root,
+        timestamp: block.timestamp,
+        mediantime: block.mediantime,
+        nonce: block.nonce,
+        bits: block.bits,
+        difficulty: block.difficulty,
+        size: block.size,
+        weight: block.weight,
+        tx_count: block.tx_count,
+        previousblockhash: block.previousblockhash
+      };
+      
+      const coinbaseAscii = blockData.coinbase_ascii || '';
+      const headerData = blockData.header_data || '';
+      
+      // Process UTXO data from current chunk
+      let utxoData = '';
+      if (blockData.transaction_chunks && blockData.transaction_chunks.length > 0) {
+        // Use specific chunk or the current chunk index
+        const chunkIdx = chunkIndex !== null ? chunkIndex : currentChunkIndex;
+        const chunk = blockData.transaction_chunks[chunkIdx] || blockData.transaction_chunks[0];
+        
+        if (chunk && chunk.utxos) {
+          const utxoStrings = chunk.utxos.map(utxo => 
+            `${utxo.address} ₿${utxo.amount_btc.toFixed(8)} ${utxo.txid}`
+          );
+          utxoData = utxoStrings.join(' ').toLowerCase().replace(/[^a-z0-9₿. ]/g, '');
+        }
+        
+        totalChunks = blockData.transaction_chunks.length;
+      }
+      
+      return {
+        block: formattedBlock,
+        txCount: block.tx_count,
+        coinbaseAscii,
+        glyphData: { headerData, utxoData }
+      };
+    }
+    
+    async function refreshLatestBlockLocal() {
+      try {
+        setStatus('Fetching block from local node…');
+        const blockData = await fetchLocalBlockData();
+        
+        const blockHash = blockData.block.hash;
+        if (!blockHash || blockHash === lastHash) {
+          // Same block, but cycle to next chunk if available
+          if (blockData.transaction_chunks && blockData.transaction_chunks.length > 0) {
+            currentChunkIndex = (currentChunkIndex + 1) % blockData.transaction_chunks.length;
+            const processed = processLocalBlockData(blockData, currentChunkIndex);
+            
+            latestGlyphs = processed.glyphData;
+            assignPoolsFromData(processed.glyphData);
+            
+            updateAgePill(latestBlock);
+            setStatus(`Same block; showing chunk ${currentChunkIndex + 1}/${totalChunks}`);
+          } else {
+            updateAgePill(latestBlock);
+            setStatus('No new block; overlay refreshed.');
+          }
+          return;
+        }
+        
+        // New block detected
+        lastHash = blockHash;
+        currentChunkIndex = 0;
+        
+        // Trigger transition effect for new block
+        triggerTransition();
+        
+        const processed = processLocalBlockData(blockData, 0);
+        latestBlock = processed.block;
+        latestGlyphs = processed.glyphData;
+        
+        assignPoolsFromData(processed.glyphData);
+        renderOverlay(processed.block, processed.txCount, processed.coinbaseAscii);
+        
+        const chunkInfo = totalChunks > 1 ? ` (chunk 1/${totalChunks})` : '';
+        setStatus(`Updated to block ${processed.block.height} (${blockHash.slice(0, 12)}…)${chunkInfo}`);
+      } catch (e) {
+        infoEl.textContent = `Error fetching from local node: ${e.message}`;
+        setStatus('Local connection error; retrying soon…');
+      }
+    }
+
     async function refreshLatestBlock() {
       try {
         setStatus('Fetching latest block from mempool.space…');
@@ -1741,9 +1846,13 @@
       // Initialize touch/desktop UI
       initializeUI();
       
+      // Determine which data source to use
+      const useLocalNode = CONFIG.useLocalNode || false;
+      const blockRefreshFunc = useLocalNode ? refreshLatestBlockLocal : refreshLatestBlock;
+      
       // Start block updates
-      refreshLatestBlock();
-      setInterval(refreshLatestBlock, CONFIG.blockRefreshInterval);
+      blockRefreshFunc();
+      setInterval(blockRefreshFunc, CONFIG.blockRefreshInterval);
       setInterval(() => updateAgePill(latestBlock), CONFIG.ageUpdateInterval);
     }
 

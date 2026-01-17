@@ -5,8 +5,11 @@ A real-time Matrix-style visualization of Bitcoin blockchain data, featuring fal
 ## Features
 
 - **Matrix Rain Effect**: Character streams with variable trail lengths (5-80% screen height) and exponential fade
-- **Live Bitcoin Data**: Real-time block data from [mempool.space](https://mempool.space) API
+- **Multiple Data Sources**: 
+  - 🌐 Public: Live block data from [mempool.space](https://mempool.space) API
+  - 🔐 Private: Connect directly to your own Tor-only Bitcoin node
 - **Node Monitor Panel**: Real-time status monitoring for Tor-only Bitcoin/Electrs/LND nodes
+- **Transaction Chunking**: Iterate through transactions in digestible chunks for comprehensive block viewing
 - **Dual Data Display**:
   - Left 25%: Block header information (hash, merkle root, version, bits, nonce, difficulty, timestamp, height, coinbase)
   - Right 75%: UTXO transaction data (addresses, amounts, transaction hashes)
@@ -17,15 +20,35 @@ A real-time Matrix-style visualization of Bitcoin blockchain data, featuring fal
 - **Keyboard Controls**: Press 's' to toggle UI visibility, '/' for menu, ESC to close panels
 - **Responsive Design**: Adapts to window resizing
 
-## Data Source
+## Data Sources
 
+### Option 1: Public API (Default)
 All blockchain data is fetched from the [mempool.space API](https://mempool.space/docs/api/rest):
 - `/api/blocks/tip/hash` - Latest block hash
 - `/api/block/{hash}` - Block details
 - `/api/block/{hash}/txids` - Transaction IDs in block
 - `/api/tx/{txid}` - Individual transaction details (first 15 transactions)
 
-Data refreshes automatically every 30 seconds.
+### Option 2: Your Own Bitcoin Node (Recommended for Privacy)
+Connect directly to your Tor-only Bitcoin node using the included Python backend service:
+- **Private & Secure**: Your .onion address never leaves your local machine
+- **Transaction Chunking**: Process transactions in batches for smooth iteration
+- **Full Control**: No reliance on third-party APIs
+- **Tor Support**: Built-in support for connecting through Tor
+
+**See [BITCOIN_NODE_SETUP.md](BITCOIN_NODE_SETUP.md) for detailed setup instructions.**
+
+Quick setup:
+```powershell
+# Run the setup script
+.\setup.ps1
+
+# Or manually:
+pip install -r requirements.txt
+Copy-Item bitcoin_config.example.json bitcoin_config.json
+# Edit bitcoin_config.json with your node details
+python bitcoin_fetcher.py
+```
 
 ## Deployment
 
@@ -37,7 +60,17 @@ Data refreshes automatically every 30 seconds.
    cd blockchain-matrix-visualizer
    ```
 
-2. Open `index.html` in a modern web browser:
+2. **Choose your data source:**
+   
+   **Option A - Use mempool.space API (default):**
+   - Just open `index.html` in a browser
+   - Set `"useLocalNode": false` in `config.json`
+   
+   **Option B - Use your own Bitcoin node:**
+   - Follow the setup guide in [BITCOIN_NODE_SETUP.md](BITCOIN_NODE_SETUP.md)
+   - Set `"useLocalNode": true` in `config.json`
+
+3. Open `index.html` in a modern web browser:
    ```bash
    # On Windows
    start index.html

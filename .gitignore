@@ -1,0 +1,5 @@
+# Add bitcoin_config.json to gitignore to protect sensitive credentials
+bitcoin_config.json
+data/
+*.pyc
+__pycache__/

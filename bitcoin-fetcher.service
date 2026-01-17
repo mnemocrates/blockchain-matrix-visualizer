@@ -1,0 +1,24 @@
+[Unit]
+Description=Bitcoin Block Fetcher for Matrix Visualizer
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/blockchain-matrix-visualizer
+ExecStart=/usr/bin/python3 /var/www/blockchain-matrix-visualizer/bitcoin_fetcher.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/www/blockchain-matrix-visualizer/data
+
+[Install]
+WantedBy=multi-user.target
