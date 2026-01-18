@@ -46,10 +46,6 @@
     "maxHeight": "80vh",
     "animationDuration": 300
   },
-  "payment": {
-    "lnurlPay": "",
-    "bitcoinAddress": ""
-  },
   "transitions": {
     "effectType": "glitch",
     "glitchDuration": 300,

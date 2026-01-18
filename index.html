@@ -5,7 +5,6 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Bitcoin Block – Data-Driven Matrix (mempool.space)</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
     :root {
       --matrix-green: #00ff7f;
@@ -437,9 +436,8 @@
 
   <!-- Menu Bar -->
   <div id="menu-bar" class="hidden">
-    <span class="menu-item" data-key="b" data-panel="blockDetails"><u>B</u>lock</span>
-    <span class="menu-item" data-key="n" data-panel="nodeMonitor"><u>M</u>onitor</span>
-    <span class="menu-item" data-key="p" data-panel="pay"><u>P</u>ay</span>
+    <span class="menu-item" data-key="b" data-panel="blockDetails"><u>B</u>lock Details</span>
+    <span class="menu-item" data-key="n" data-panel="nodeMonitor"><u>N</u>ode Monitor</span>
     <span class="menu-item" data-key="a" data-panel="about" style="margin-left: auto;"><u>A</u>bout</span>
   </div>
 
@@ -512,10 +510,6 @@
           // Keyboard
           toggleKey: config.keyboard.toggleKey,
           
-          // Payment
-          lnurlPay: config.payment?.lnurlPay || '',
-          bitcoinAddress: config.payment?.bitcoinAddress || '',
-          
           // Transitions
           transitionEffect: config.transitions?.effectType || 'none',
           glitchDuration: config.transitions?.glitchDuration || 300,
@@ -551,8 +545,6 @@
           ageUpdateInterval: 1000,
           transactionFetchLimit: 15,
           toggleKey: 's',
-          lnurlPay: '',
-          bitcoinAddress: '',
           transitionEffect: 'none',
           glitchDuration: 300,
           glitchIntensity: 0.15,
@@ -1006,10 +998,6 @@
           panelTitle.textContent = 'Node Monitor';
           startNodeStatusRefresh();
           break;
-        case 'pay':
-          panelTitle.textContent = 'Pay';
-          renderPayPanel();
-          break;
         case 'about':
           panelTitle.textContent = 'About';
           renderAboutPanel();
@@ -1150,260 +1138,6 @@
           </p>
         </div>
       `;
-    }
-    
-    function renderPayPanel() {
-      const hasLightning = CONFIG && CONFIG.lnurlPay;
-      const hasBitcoin = CONFIG && CONFIG.bitcoinAddress;
-      
-      if (!hasLightning && !hasBitcoin) {
-        panelContent.innerHTML = `
-          <div class="panel-section" style="text-align: center; padding: 3rem 2rem;">
-            <div style="font-size: 3rem; margin-bottom: 1rem;">⚠️</div>
-            <div class="panel-section-title">Payment Not Configured</div>
-            <p style="line-height: 1.8; color: var(--matrix-dim); margin-top: 1rem;">
-              Please add your payment details to <code style="color: var(--matrix-green); background: rgba(0,255,127,0.1); padding: 0.2rem 0.4rem; border-radius: 3px;">config.json</code> 
-              under the <code style="color: var(--matrix-green); background: rgba(0,255,127,0.1); padding: 0.2rem 0.4rem; border-radius: 3px;">payment</code> section:<br>
-              <code style="color: var(--matrix-green); background: rgba(0,255,127,0.1); padding: 0.2rem 0.4rem; border-radius: 3px;">lnurlPay</code> for Lightning or 
-              <code style="color: var(--matrix-green); background: rgba(0,255,127,0.1); padding: 0.2rem 0.4rem; border-radius: 3px;">bitcoinAddress</code> for on-chain.
-            </p>
-          </div>
-        `;
-        return;
-      }
-      
-      // Default to Lightning if available, otherwise Bitcoin
-      const defaultMode = hasLightning ? 'lightning' : 'bitcoin';
-      
-      panelContent.innerHTML = `
-        <div class="panel-section">
-          <!-- Payment Mode Toggle -->
-          <div style="display: flex; justify-content: center; gap: 0.5rem; margin-bottom: 2rem;">
-            ${hasLightning ? `<button id="toggle-lightning" class="payment-toggle active" data-mode="lightning">
-              ⚡ Lightning
-            </button>` : ''}
-            ${hasBitcoin ? `<button id="toggle-bitcoin" class="payment-toggle${!hasLightning ? ' active' : ''}" data-mode="bitcoin">
-              ₿ Bitcoin
-            </button>` : ''}
-          </div>
-          
-          <!-- Lightning Payment View -->
-          <div id="lightning-view" class="payment-view${defaultMode === 'lightning' ? ' active' : ''}" style="text-align: center;">
-            <div class="panel-section-title">Lightning Payment</div>
-            <p style="line-height: 1.8; color: var(--matrix-dim); margin-bottom: 1.5rem; font-size: 0.9rem;">
-              Scan with a Lightning wallet or enter custom amount and memo below.
-            </p>
-            
-            <!-- QR Code -->
-            <div id="qrcode-lightning" style="display: inline-block; padding: 1rem; background: #000; border: 2px solid var(--matrix-green); border-radius: 8px; box-shadow: 0 0 20px rgba(0,255,127,0.3); margin-bottom: 1.5rem;"></div>
-            
-            <!-- Amount and Memo Fields -->
-            <div style="max-width: 400px; margin: 0 auto 1.5rem;">
-              <div style="margin-bottom: 1rem;">
-                <label style="display: block; text-align: left; font-size: 0.85rem; color: var(--matrix-dim); margin-bottom: 0.5rem;">Amount (sats)</label>
-                <input type="number" id="ln-amount" placeholder="Optional" 
-                  style="width: 100%; padding: 0.6rem; background: rgba(0,0,0,0.5); border: 1px solid var(--matrix-dim); border-radius: 4px; color: var(--matrix-green); font-family: var(--mono); font-size: 0.95rem;"
-                  min="1">
-              </div>
-              <div style="margin-bottom: 1rem;">
-                <label style="display: block; text-align: left; font-size: 0.85rem; color: var(--matrix-dim); margin-bottom: 0.5rem;">Memo</label>
-                <input type="text" id="ln-memo" placeholder="Optional" 
-                  style="width: 100%; padding: 0.6rem; background: rgba(0,0,0,0.5); border: 1px solid var(--matrix-dim); border-radius: 4px; color: var(--matrix-green); font-family: var(--mono); font-size: 0.95rem;">
-              </div>
-            </div>
-            
-            <!-- LNURL Display and Copy -->
-            <div style="padding: 1rem; background: rgba(0,255,127,0.05); border: 1px solid var(--matrix-dim); border-radius: 6px;">
-              <div style="font-size: 0.85rem; color: var(--matrix-dim); margin-bottom: 0.5rem;">LNURL-Pay</div>
-              <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <div id="lnurl-text" style="flex: 1; font-family: var(--mono); font-size: 0.75rem; color: var(--matrix-green); word-break: break-all; line-height: 1.4; text-align: left;">${hasLightning ? CONFIG.lnurlPay : ''}</div>
-                <button id="copy-lnurl" class="copy-btn" title="Copy LNURL">📋</button>
-              </div>
-            </div>
-            <div style="margin-top: 1rem; font-size: 0.85rem; color: var(--matrix-dim); line-height: 1.6;">
-              💡 Tip: Amount and memo are optional. Use if your wallet supports custom LNURL payments.
-            </div>
-          </div>
-          
-          <!-- Bitcoin Payment View -->
-          <div id="bitcoin-view" class="payment-view${defaultMode === 'bitcoin' ? ' active' : ''}" style="text-align: center;">
-            <div class="panel-section-title">Bitcoin Payment</div>
-            <p style="line-height: 1.8; color: var(--matrix-dim); margin-bottom: 1.5rem; font-size: 0.9rem;">
-              Scan with any Bitcoin wallet to send an on-chain payment.
-            </p>
-            
-            <!-- QR Code -->
-            <div id="qrcode-bitcoin" style="display: inline-block; padding: 1rem; background: #000; border: 2px solid var(--matrix-green); border-radius: 8px; box-shadow: 0 0 20px rgba(0,255,127,0.3); margin-bottom: 1.5rem;"></div>
-            
-            <!-- Address Display and Copy -->
-            <div style="padding: 1rem; background: rgba(0,255,127,0.05); border: 1px solid var(--matrix-dim); border-radius: 6px;">
-              <div style="font-size: 0.85rem; color: var(--matrix-dim); margin-bottom: 0.5rem;">Bitcoin Address</div>
-              <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <div id="bitcoin-text" style="flex: 1; font-family: var(--mono); font-size: 0.85rem; color: var(--matrix-green); word-break: break-all; line-height: 1.4; text-align: left;">${hasBitcoin ? CONFIG.bitcoinAddress : ''}</div>
-                <button id="copy-bitcoin" class="copy-btn" title="Copy Address">📋</button>
-              </div>
-            </div>
-            <div style="margin-top: 1rem; font-size: 0.85rem; color: var(--matrix-dim); line-height: 1.6;">
-              ⛓️ On-chain transactions may take 10-60 minutes to confirm.
-            </div>
-          </div>
-        </div>
-      `;
-      
-      // Add styles for payment toggles and views
-      if (!document.getElementById('payment-styles')) {
-        const style = document.createElement('style');
-        style.id = 'payment-styles';
-        style.textContent = `
-          .payment-toggle {
-            padding: 0.6rem 1.5rem;
-            background: rgba(0,0,0,0.5);
-            border: 1px solid var(--matrix-dim);
-            color: var(--matrix-dim);
-            cursor: pointer;
-            font-family: var(--mono);
-            font-size: 0.95rem;
-            border-radius: 6px;
-            transition: all 0.2s ease;
-          }
-          .payment-toggle:hover {
-            border-color: var(--matrix-green);
-            color: var(--matrix-green);
-            box-shadow: 0 0 8px rgba(0,255,127,0.2);
-          }
-          .payment-toggle.active {
-            background: rgba(0,255,127,0.15);
-            border-color: var(--matrix-green);
-            color: var(--matrix-green);
-            box-shadow: 0 0 12px rgba(0,255,127,0.3);
-          }
-          .payment-view {
-            display: none;
-          }
-          .payment-view.active {
-            display: block;
-          }
-          .copy-btn {
-            padding: 0.5rem 0.75rem;
-            background: rgba(0,255,127,0.1);
-            border: 1px solid var(--matrix-dim);
-            color: var(--matrix-green);
-            cursor: pointer;
-            font-size: 1.2rem;
-            border-radius: 4px;
-            transition: all 0.2s ease;
-            min-width: 44px;
-          }
-          .copy-btn:hover {
-            background: rgba(0,255,127,0.2);
-            border-color: var(--matrix-green);
-            box-shadow: 0 0 8px rgba(0,255,127,0.3);
-          }
-          .copy-btn:active {
-            transform: scale(0.95);
-          }
-          #ln-amount:focus, #ln-memo:focus {
-            outline: none;
-            border-color: var(--matrix-green);
-            box-shadow: 0 0 8px rgba(0,255,127,0.2);
-          }
-        `;
-        document.head.appendChild(style);
-      }
-      
-      // Setup event handlers after DOM is ready
-      setTimeout(() => {
-        // Toggle buttons
-        const lightningToggle = document.getElementById('toggle-lightning');
-        const bitcoinToggle = document.getElementById('toggle-bitcoin');
-        const lightningView = document.getElementById('lightning-view');
-        const bitcoinView = document.getElementById('bitcoin-view');
-        
-        if (lightningToggle) {
-          lightningToggle.addEventListener('click', () => {
-            lightningToggle.classList.add('active');
-            if (bitcoinToggle) bitcoinToggle.classList.remove('active');
-            lightningView.classList.add('active');
-            if (bitcoinView) bitcoinView.classList.remove('active');
-          });
-        }
-        
-        if (bitcoinToggle) {
-          bitcoinToggle.addEventListener('click', () => {
-            bitcoinToggle.classList.add('active');
-            if (lightningToggle) lightningToggle.classList.remove('active');
-            bitcoinView.classList.add('active');
-            if (lightningView) lightningView.classList.remove('active');
-          });
-        }
-        
-        // Copy buttons
-        const copyLnurl = document.getElementById('copy-lnurl');
-        const copyBitcoin = document.getElementById('copy-bitcoin');
-        
-        if (copyLnurl) {
-          copyLnurl.addEventListener('click', async () => {
-            try {
-              await navigator.clipboard.writeText(CONFIG.lnurlPay);
-              copyLnurl.textContent = '✓';
-              setTimeout(() => { copyLnurl.textContent = '📋'; }, 2000);
-            } catch (err) {
-              console.error('Failed to copy:', err);
-              copyLnurl.textContent = '✗';
-              setTimeout(() => { copyLnurl.textContent = '📋'; }, 2000);
-            }
-          });
-        }
-        
-        if (copyBitcoin) {
-          copyBitcoin.addEventListener('click', async () => {
-            try {
-              await navigator.clipboard.writeText(CONFIG.bitcoinAddress);
-              copyBitcoin.textContent = '✓';
-              setTimeout(() => { copyBitcoin.textContent = '📋'; }, 2000);
-            } catch (err) {
-              console.error('Failed to copy:', err);
-              copyBitcoin.textContent = '✗';
-              setTimeout(() => { copyBitcoin.textContent = '📋'; }, 2000);
-            }
-          });
-        }
-        
-        // Generate QR codes
-        if (typeof QRCode !== 'undefined') {
-          // Lightning QR
-          if (hasLightning) {
-            const qrLightning = document.getElementById('qrcode-lightning');
-            if (qrLightning) {
-              new QRCode(qrLightning, {
-                text: CONFIG.lnurlPay,
-                width: 256,
-                height: 256,
-                colorDark: '#00ff7f',
-                colorLight: '#000000',
-                correctLevel: QRCode.CorrectLevel.M
-              });
-            }
-          }
-          
-          // Bitcoin QR
-          if (hasBitcoin) {
-            const qrBitcoin = document.getElementById('qrcode-bitcoin');
-            if (qrBitcoin) {
-              new QRCode(qrBitcoin, {
-                text: CONFIG.bitcoinAddress,
-                width: 256,
-                height: 256,
-                colorDark: '#00ff7f',
-                colorLight: '#000000',
-                correctLevel: QRCode.CorrectLevel.H
-              });
-            }
-          }
-        } else {
-          console.error('QRCode library not loaded');
-        }
-      }, 50);
     }
     
     // Node Monitor State
